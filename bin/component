@@ -5,8 +5,12 @@
  */
 
 var program = require('commander')
-  , utils = require('../lib/utils')
-  , spawn = require('child_process').spawn;
+  , component = require('..')
+  , utils = component.utils
+  , spawn = require('child_process').spawn
+  , fs = require('fs')
+  , exists = fs.existsSync
+  , os = require('os');
 
 // usage
 
@@ -23,6 +27,7 @@ program.on('--help', function(){
   console.log('    create <dir>            create a component skeleton');
   console.log('    search [query]          search with the given query');
   console.log('    convert <file ...>      convert html files to js modules');
+  console.log('    register                register a component so others can find it');
   console.log('    info <name> [prop]      output json component information');
   console.log('    changes <name>          output changelog contents');
   console.log('    docs <name>             output readme contents');
@@ -57,16 +62,31 @@ if (!cmd) {
   process.exit();
 }
 
-// executable
+var commandName = 'component-' + cmd;
+var proc = startProc(commandName, args);
 
-var bin = 'component-' + cmd;
-
-// exec
-
-var proc = spawn(bin, args, { customFds: [1, -1, -1] });
-proc.stdout.pipe(process.stdout);
-proc.stderr.pipe(process.stderr);
-
-proc.on('exit', function(code){
+proc.on('exit', function(code){  
   if (127 == code) utils.fatal('the "' + cmd + '" command does not exist');
 });
+
+function startProc(commandName, args){
+  if (os.type() === 'Windows_NT'){
+    return startProcWindows(commandName, args);      
+  }
+  else {
+    return startProcNonWindows(commandName, args);
+  }
+}
+
+function startProcWindows(commandName, args){
+  var bin = "cmd";
+  var cmdArgs = ["/C", commandName].concat(args);
+  return spawn(bin, cmdArgs, {stdio:"inherit"});
+}
+
+function startProcNonWindows(commandName, args){
+  return spawn(commandName, args, {stdio:"inherit"});
+}
+
+
+
