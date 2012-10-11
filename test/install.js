@@ -150,7 +150,7 @@ describe('component install from private registries', function(){
   })
 
   it('should install private component', function(done){
-    exec('bin/component-install private/test', function(err, stdout){
+    exec('bin/component install private/test', function(err, stdout){
       if (err) return done(err);
       var json = require(path.resolve('components/private-test/component.json'));
       json.name.should.equal('test');

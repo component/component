@@ -89,7 +89,7 @@ pkgs.forEach(function(pkgname){
   var conf = config();
 
   function installpkg(registry, fn) {
-    pkg = component.install(pkgname, version, {
+    var pkg = component.install(pkgname, version, {
       dest: program.out,
       force: program.force,
       dev: program.dev,
@@ -102,25 +102,29 @@ pkgs.forEach(function(pkgname){
       pkg.once('end', fn);
     }
 
-    report(pkg);
-    pkg.install();
+    if (registry) {
+      report(pkg, 'warning');
+    } else {
+      report(pkg);
+    }
+
+	  pkg.install();
   }
 
   function trynextregistry() {
-    var registry = conf.registries.shift();
-    installpkg(registry, function(err){
+    var registry = conf.registries ? conf.registries.shift() : null;
+    if (registry) {
+      installpkg(registry, function(err){
+        if (err)
+          return trynextregistry();
+      });
+    } else {
       // the last registry is the default one
-      if (err && registry)
-        return trynextregistry();
-    });
+      installpkg(registry);
+    }
   }
 
-  if (Array.isArray(conf.registries)) {
-    trynextregistry();
-  } else {
-    // install from the default registry
-    installpkg(null);
-  }
+  trynextregistry();
 });
 
 // map deps to args
@@ -133,12 +137,16 @@ function normalize(deps) {
 
 // reporter
 
-function report(pkg) {
+function report(pkg, level) {
   log('install', pkg.name + '@' + pkg.version);
 
   pkg.on('error', function(err){
-    log('error', err.message);
-    process.exit(1);
+    if (level === 'warning') {
+      log('warning', err.message);
+    } else {
+      log('error', err.message);
+      process.exit(1);
+    }
   });
 
   pkg.on('dep', function(dep){
