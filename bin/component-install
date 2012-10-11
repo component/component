@@ -82,19 +82,45 @@ if (program.save) {
 // install
 
 console.log();
-pkgs.forEach(function(pkg){
-  var parts = pkg.split('@');
-  pkg = parts.shift();
+pkgs.forEach(function(pkgname){
+  var parts = pkgname.split('@');
+  pkgname = parts.shift();
   var version = parts.shift() || 'master';
+  var conf = config();
 
-  pkg = component.install(pkg, version, {
-    dest: program.out,
-    force: program.force,
-    dev: program.dev,
-    auth: conf.auth
-  });
-  report(pkg);
-  pkg.install();
+  function installpkg(registry, fn) {
+    pkg = component.install(pkgname, version, {
+      dest: program.out,
+      force: program.force,
+      dev: program.dev,
+      auth: conf.auth,
+      remote: registry
+    });
+
+    if (fn) {
+      pkg.once('error', fn);
+      pkg.once('end', fn);
+    }
+
+    report(pkg);
+    pkg.install();
+  }
+
+  function trynextregistry() {
+    var registry = conf.registries.shift();
+    installpkg(registry, function(err){
+      // the last registry is the default one
+      if (err && registry)
+        return trynextregistry();
+    });
+  }
+
+  if (Array.isArray(conf.registries)) {
+    trynextregistry();
+  } else {
+    // install from the default registry
+    installpkg(null);
+  }
 });
 
 // map deps to args

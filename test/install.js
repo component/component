@@ -7,6 +7,7 @@ var exec = require('child_process').exec
   , fs = require('fs')
   , assert = require('assert')
   , path = require('path')
+  , express = require('express')
   , exists = fs.existsSync || path.existsSync;
 
 describe('component install', function(){
@@ -116,5 +117,61 @@ describe('component install', function(){
       json.name.should.equal('emitter');
       done();
     })
+  })
+})
+
+describe('component install from private registries', function(){
+  var app = express();
+
+  before(function(done){
+    exec('rm -fr components component.json', done);
+  })
+
+  before(function(done){
+    fs.writeFile('component.json', JSON.stringify({
+      registries: [ 'http://localhost:3000' ]
+    }), done);
+  })
+
+  before(function(done){
+    exec('mkdir -p test/private/test/master', done);
+  })
+
+  before(function(done){
+    fs.writeFile('test/private/test/master/component.json', JSON.stringify({
+      name: 'test',
+      repo: 'private/test'
+    }), done);
+  })
+
+  before(function(done){
+    app.use(express.static(__dirname));
+    app.listen(3000, done);
+  })
+
+  it('should install private component', function(done){
+    exec('bin/component-install private/test', function(err, stdout){
+      if (err) return done(err);
+      var json = require(path.resolve('components/private-test/component.json'));
+      json.name.should.equal('test');
+      json.repo.should.equal('private/test');
+      done();
+    })
+  })
+
+  it('should fallback to github', function(done){
+    exec('bin/component install component/emitter', function(err, stdout){
+      if (err) return done(err);
+      stdout.should.include('install');
+      stdout.should.include('fetch');
+      stdout.should.include('complete');
+      var json = require(path.resolve('components/component-emitter/component.json'));
+      json.name.should.equal('emitter');
+      done();
+    })
+  })
+
+  after(function(done){
+    exec('rm -fr test/private components component.json', done);
   })
 })
