@@ -102,7 +102,6 @@ pkgs.forEach(function(pkgname){
       auth = conf.auth;
     }
     
-    console.log('trying ' + url);
     var pkg = component.install(pkgname, version, {
       dest: program.out,
       force: program.force,
@@ -152,7 +151,7 @@ function Registry(reg) {
   if (typeof reg === 'string') {
     var urlparts = URL.parse(reg);
     if (urlparts.auth) {
-      var parts = urlparts.auth.slipt(':');
+      var parts = urlparts.auth.split(':');
       registry.auth = {
         user: parts[0],
         pass: parts[1]
