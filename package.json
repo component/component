@@ -25,7 +25,8 @@
   "devDependencies": {
     "minstache": "0.0.1",
     "mocha": "*",
-    "should": "*"
+    "should": "*",
+    "express": "*"
   },
   "bin": {
     "component": "bin/component",
