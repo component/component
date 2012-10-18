@@ -6,6 +6,7 @@
 
 var program = require('commander')
   , utils = require('../lib/utils')
+  , path = require('path')
   , spawn = require('win-spawn');
 
 // usage
@@ -60,7 +61,7 @@ if (!cmd) {
 
 // executable
 
-var bin = 'component-' + cmd;
+var bin = path.join(__dirname, 'component-' + cmd);
 
 // spawn
 
