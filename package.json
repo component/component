@@ -43,5 +43,6 @@
     "component-wiki": "bin/component-wiki",
     "component-docs": "bin/component-docs"
   },
-  "main": "index"
+  "main": "index",
+  "test": "testing"
 }
