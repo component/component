@@ -1,4 +1,3 @@
-
   ![web component logo](http://i49.tinypic.com/e7nj9v.png)
 
   Component package manager for building a better web.
@@ -218,9 +217,9 @@ $ make test
 
 ## Example applications
 
-  Open source application examples:
+Open source application examples:
   
-    - [Todo list](https://github.com/component/todo)
+- [Todo list](https://github.com/component/todo)
 
 ## License 
 
