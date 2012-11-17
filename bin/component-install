@@ -5,6 +5,7 @@
  */
 
 var program = require('commander')
+  , Batch = require('batch')
   , component = require('..')
   , fs = require('fs')
   , exists = fs.existsSync
@@ -89,14 +90,13 @@ if (local) {
   }
 }
 
-// save to ./component.json
+// add to ./component.json
 
 if (!local) {
   conf.dependencies = conf.dependencies || {};
   pkgs.forEach(function(pkg){
     conf.dependencies[pkg] = '*';
   });
-  saveConfig();
 }
 
 // implicit remotes
@@ -107,11 +107,25 @@ conf.remotes.push('https://raw.github.com');
 // install
 
 console.log();
-pkgs.forEach(function(pkg){
-  var parts = pkg.split('@');
-  var name = parts.shift();
-  var version = parts.shift() || 'master';
-  install(name, version);
+
+var batch = new Batch();
+pkgs.forEach(function (pkg){
+  batch.push(function(done){
+    var parts = pkg.split('@');
+    var name = parts.shift();
+    var version = parts.shift() || 'master';
+    install(name, version, done);
+  });
+});
+
+
+batch.end(function (err) {
+  
+  // write ./component.json
+
+  if (!local) {
+    saveConfig();
+  }
 });
 
 // map deps to args
@@ -170,7 +184,7 @@ process.on('exit', function(){
  * @api private
  */
 
-function install(name, version) {
+function install(name, version, done) {
   var i = 0;
 
   next();
@@ -201,6 +215,7 @@ function install(name, version) {
 
     // TODO: add callback
     pkg.install();
+    pkg.on('end', done);
   }
 }
 
