@@ -17,6 +17,7 @@ var program = require('commander')
 
 program
   .option('-d, --dev', 'build development dependencies')
+  .option('-S, --separate', 'output separate files instead of a single concatenated file')
   .option('-s, --standalone <name>', 'build a stand-alone version of the component')
   .option('-o, --out <dir>', 'output directory defaulting to ./build', 'build')
   .option('-n, --name <file>', 'base name for build files defaulting to build', 'build')
@@ -55,11 +56,6 @@ var standalone = program.standalone;
 
 mkdir.sync(program.out);
 
-// output streams
-
-var js = fs.createWriteStream(path.join(program.out, program.name + '.js'));
-var css = fs.createWriteStream(path.join(program.out, program.name + '.css'));
-
 // build
 
 var builder = new Builder(process.cwd());
@@ -77,6 +73,10 @@ var start = new Date;
 
 if (program.dev) builder.development();
 
+// --separate
+
+if (program.separate) builder.separate();
+
 if (program.verbose) console.log();
 builder.build(function(err, obj){
   if (err) utils.fatal(err.message);
@@ -85,23 +85,47 @@ builder.build(function(err, obj){
     ? standalone
     : conf.name;
 
-  css.write(obj.css);
-  if (standalone) js.write(';(function(){\n');
-  js.write(obj.require);
-  js.write(obj.js);
-  if (standalone) js.write('  if ("undefined" == typeof module) {\n');
-  if (standalone) js.write('    window.' + name + ' = require("' + conf.name + '");\n');
-  if (standalone) js.write('  } else {\n');
-  if (standalone) js.write('    module.exports = require("' + conf.name + '");\n');
-  if (standalone) js.write('  }\n');
-  if (standalone) js.write('})();');
+  if (program.separate) {
+    [{file: 'require.js', content: obj.require}].concat(obj.js)
+      .forEach(function (js, i) {
+      var out = fs.createWriteStream(path.join(program.out, i + '-' + js.file));
+      out.write(js.content);
+      if (program.verbose) log('write', out.path);
+    });
+
+    obj.css.forEach(function (css, i) {
+      var out = fs.createWriteStream(path.join(program.out, i + '-' + css.file));
+      out.write(css.content);
+      if (program.verbose) log('write', out.path);
+    });
+  } else {
+    var js = fs.createWriteStream(path.join(program.out, program.name + '.js'));
+    if (standalone) js.write(';(function(){\n');
+    js.write(obj.require);
+    js.write(obj.js);
+    if (standalone) js.write('  if ("undefined" == typeof module) {\n');
+    if (standalone) js.write('    window.' + name + ' = require("' + conf.name + '");\n');
+    if (standalone) js.write('  } else {\n');
+    if (standalone) js.write('    module.exports = require("' + conf.name + '");\n');
+    if (standalone) js.write('  }\n');
+    if (standalone) js.write('})();');
+    if (program.verbose) log('write', js.path);
+
+    var css = fs.createWriteStream(path.join(program.out, program.name + '.css'));
+    css.write(obj.css);
+    if (program.verbose) log('write', css.path);
+  }
 
   if (!program.verbose) return;
   var duration = new Date - start;
-  log('write', js.path);
-  log('write', css.path);
-  log('js', (obj.js.length / 1024 | 0) + 'kb');
-  log('css', (obj.css.length / 1024 | 0) + 'kb');
+  var jslength = program.separate ?
+    obj.js.map(function (js) { return js.content.length; }).reduce(function (a, b) { return a + b; }, 0) :
+    obj.js.length;
+  var csslength = program.separate ?
+    obj.css.map(function (css) { return css.content.length; }).reduce(function (a, b) { return a + b; }, 0) :
+    obj.css.length;
+  log('js', (jslength / 1024 | 0) + 'kb');
+  log('css', (csslength / 1024 | 0) + 'kb');
   log('duration', duration + 'ms');
   console.log();
 });
