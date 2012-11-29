@@ -68,7 +68,9 @@ if(!exists(compDir)) {
 // create symbolic link for each link into the components folder
 links.forEach(function (link) {
     var linkDir = path.join(compDir, link.link);
-    if (exists(linkDir))
-        fs.rmdirSync(linkDir);
+    if (exists(linkDir)) {
+        try { fs.unlinkSync(linkDir); }
+        catch(e) { utils.fatal('Directory \'' + linkDir + '\'' + ' already exists.') }
+    }
     fs.symlinkSync(link.target, linkDir, 'junction');
 });
