@@ -15,8 +15,7 @@ var program = require('commander')
 // options
 
 program
-  .usage('component unlink <linked_component>')
-  .option('--help', 'Displays this help.');
+  .usage('<linked_component>');
 
 // examples
 
@@ -44,13 +43,12 @@ if(args.length == 0) {
     args = fs.readdirSync(compDir);
 }
 
-//
+// remove existing linked components
 if (exists(compDir)) {
     args.forEach(function (arg) {
         var target = path.join(compDir, arg);
         if (!exists(target))
             return;
-        //        utils.fatal('<path_to_dependent_component> does not exist.');
         try {
         fs.unlinkSync(target);
         }

@@ -15,8 +15,7 @@ var program = require('commander')
 // options
 
 program
-  .usage('component link <path_to_dependent_component>')
-  .option('--help', 'Displays this help.');
+  .usage('<path_to_dependent_component>');
 
 // examples
 
