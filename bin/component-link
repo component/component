@@ -1,0 +1,75 @@
+//#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var program = require('commander')
+  , component = require('..')
+  , fs = require('fs')
+  , exists = fs.existsSync
+  , utils = component.utils
+  , path = require('path')
+  , resolve = path.resolve
+
+// options
+
+program
+  .usage('<path_to_dependent_component>');
+
+// examples
+
+program.on('--help', function(){
+  console.log('  Examples:');
+  console.log();
+  console.log('    # link to a single component');
+  console.log('    $ component link ../component1');
+  console.log();
+  console.log('    # link to multiple components');
+  console.log('    $ component link ../component2 ../../tests/component3');
+  console.log();
+});
+
+// parse argv
+
+program.parse(process.argv);
+
+// links
+var links = [];
+var args = program.args;
+var compDir = './components';
+
+if(args.length == 0) utils.fatal('<path_to_dependent_component> does not exist.'); 
+
+// verify all links exist and get symbolic link info
+args.forEach(function (arg) {
+    var target = arg;
+    if (!exists(target))
+        utils.fatal('Path ' + target + ' does not exist.');
+    var link = { target: target };
+    var targetComp = path.join(target, 'component.json');
+    if (exists(targetComp)) {
+        var fullCompPath = resolve(targetComp);
+        var comp = require(fullCompPath);
+        if (comp.repo) {
+            link.link = comp.repo.replace('/', '-');
+        }
+    }
+    if (!link.link)
+        link.link = target.split(/[\/|\\]/).slice(-1)[0];
+    links.push(link);
+});
+
+// create the components directory if it doesn't exist
+if(!exists(compDir)) {
+    fs.mkdirSync(compDir);
+}
+// create symbolic link for each link into the components folder
+links.forEach(function (link) {
+    var linkDir = path.join(compDir, link.link);
+    if (exists(linkDir)) {
+        try { fs.unlinkSync(linkDir); }
+        catch(e) { utils.fatal('Directory \'' + linkDir + '\'' + ' already exists.') }
+    }
+    fs.symlinkSync(link.target, linkDir, 'junction');
+});
