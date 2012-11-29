@@ -9,16 +9,13 @@ var program = require('commander')
   , fs = require('fs')
   , exists = fs.existsSync
   , utils = component.utils
-  , log = utils.log
-  , error = utils.error
-  , url = require('url')
   , path = require('path')
   , resolve = path.resolve
 
 // options
 
 program
-  .usage('<path_to_dependent_component_directory>')
+  .usage('component link <path_to_dependent_component>')
   .option('--help', 'Displays this help.');
 
 // examples
@@ -27,10 +24,10 @@ program.on('--help', function(){
   console.log('  Examples:');
   console.log();
   console.log('    # link to a single component');
-  console.log('    $ component link ../dependent_component');
+  console.log('    $ component link ../component1');
   console.log();
-  console.log('    # link to a single component');
-  console.log('    $ component link ../dependent_component ../../testing/another_dependent_component');
+  console.log('    # link to multiple components');
+  console.log('    $ component link ../component2 ../../tests/component3');
   console.log();
 });
 
@@ -39,189 +36,39 @@ program.on('--help', function(){
 program.parse(process.argv);
 
 // links
+var links = [];
+var args = program.args;
+var compDir = './components';
 
-var links = program.args;
+if(args.length == 0) utils.fatal('<path_to_dependent_component> does not exist.'); 
 
-// verify all links exist
-
-// for each link read in the component.json and construct the target folder to go under components
+// verify all links exist and get symbolic link info
+args.forEach(function (arg) {
+    var target = arg;
+    if (!exists(target))
+        utils.fatal('Path ' + target + ' does not exist.');
+    var link = { target: target };
+    var targetComp = path.join(target, 'component.json');
+    if (exists(targetComp)) {
+        var fullCompPath = resolve(targetComp);
+        var comp = require(fullCompPath);
+        if (comp.repo) {
+            link.link = comp.repo.replace('/', '-');
+        }
+    }
+    if (!link.link)
+        link.link = target.split(/[\/|\\]/).slice(-1)[0];
+    links.push(link);
+});
 
 // create the components directory if it doesn't exist
-
+if(!exists(compDir)) {
+    fs.mkdirSync(compDir);
+}
 // create symbolic link for each link into the components folder
-
-
-// install from ./component.json
-
-var local = 0 == pkgs.length;
-
-// read json
-
-var conf = loadConfig();
-
-// install from ./component.json
-
-if (local) {
-  if (conf.dependencies) {
-    pkgs = normalize(conf.dependencies);
-  }
-
-  if (conf.development && program.dev) {
-    pkgs = pkgs.concat(normalize(conf.development));
-  }
-
-  if (conf.local) {
-    conf.local.forEach(function(pkg){
-      try {
-        var deps = component.dependenciesOf(pkg, conf.paths);
-        deps.map(normalize).forEach(function(deps){
-          pkgs = pkgs.concat(deps);
-        });
-      } catch (err) {
-        utils.fatal(err.message);
-      }
-    });
-  }
-}
-
-// save to ./component.json
-
-if (!local) {
-  conf.dependencies = conf.dependencies || {};
-  pkgs.forEach(function(pkg){
-    conf.dependencies[pkg] = '*';
-  });
-  saveConfig();
-}
-
-// implicit remotes
-
-conf.remotes = conf.remotes || [];
-conf.remotes.push('https://raw.github.com');
-
-// install
-
-console.log();
-pkgs.forEach(function(pkg){
-  var parts = pkg.split('@');
-  var name = parts.shift();
-  var version = parts.shift() || 'master';
-  install(name, version);
+links.forEach(function (link) {
+    var linkDir = path.join(compDir, link.link);
+    if (exists(linkDir))
+        fs.rmdirSync(linkDir);
+    fs.symlinkSync(link.target, linkDir, 'junction');
 });
-
-// map deps to args
-
-function normalize(deps) {
-  return Object.keys(deps).map(function(name){
-    return name + '@' + deps[name];
-  });
-}
-
-// reporter
-
-function report(pkg, options) {
-  options = options || {};
-  log('install', pkg.name + '@' + pkg.version);
-
-  pkg.on('error', function(err){
-    if (404 != err.status) utils.fatal(err.stack);
-
-    if (options.error) {
-      error(err.message);
-      process.exit(1);
-    }
-  });
-
-  pkg.on('dep', function(dep){
-    log('dep', dep.name + '@' + dep.version);
-    report(dep, options);
-  });
-
-  pkg.on('exists', function(dep){
-    log('exists', dep.name + '@' + dep.version);
-  });
-
-  pkg.on('file', function(file){
-    log('fetch', pkg.name + ':' + file);
-  });
-
-  pkg.on('end', function(){
-    log('complete', pkg.name);
-  });
-}
-
-// padding
-
-process.on('exit', function(){
-  console.log();
-});
-
-/**
- * Install package `name` at the given `version`
- * from all specified remotes.
- *
- * @param {String} name
- * @param {String} version
- * @api private
- */
-
-function install(name, version) {
-  var i = 0;
-
-  next();
-
-  function next() {
-    var remote = conf.remotes[i++];
-    if (!remote) return;
-
-    // parse remote
-    var last = i == conf.remotes.length - 1;
-    remote = url.parse(remote);
-
-    // strip trailing /
-    remote.href = remote.href.slice(0, -1);
-
-    // kick of installation
-    var pkg = component.install(name, version, {
-      dest: program.out,
-      force: program.force,
-      dev: program.dev,
-      remote: remote.href
-    });
-
-    // only error on the last remote otherwise
-    // we assume it may be fetchable
-    pkg.once('error', next);
-    report(pkg, { error: !last });
-
-    // TODO: add callback
-    pkg.install();
-  }
-}
-
-/**
- * Read / create ./component.json.
- *
- * @return {Object}
- * @api private
- */
-
-function loadConfig() {
-  var path = resolve('component.json');
-  if (exists('component.json')) {
-    return require(path);
-  } else {
-    return {};
-  }
-}
-
-/**
- * Save configuration.
- *
- * @api private
- */
-
-function saveConfig() {
-  var path = resolve('component.json');
-  fs.writeFileSync(path, JSON.stringify(conf, null, 2));
-}
