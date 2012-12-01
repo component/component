@@ -1,0 +1,228 @@
+//#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var program = require('commander')
+  , spawn = require('win-spawn')
+  , component = require('..')
+  , utils = component.utils
+  , log = utils.log
+  , error = utils.error
+  , url = require('url')
+  , fs = require('fs')
+  , exists = fs.existsSync
+  , utils = component.utils
+  , path = require('path')
+  , rimraf = require('rimraf')
+  , resolve = path.resolve;
+
+// options
+
+program
+  .usage('<path_to_dependent_component>')
+  .option('-s, --skip', 'skip if the component is already installed')
+  .option('-n, --nodeps', 'don\'t resolve dependents for this component');
+
+// examples
+
+program.on('--help', function(){
+  console.log('  Examples:');
+  console.log();
+  console.log('    # symlink a single component');
+  console.log('    $ component link ../component1');
+  console.log();
+  console.log('    # symlink multiple components');
+  console.log('    $ component link ../component2 ../../tests/component3');
+  console.log();
+  console.log('    # symlink component only if it doesn\'t exist.');
+  console.log('    $ component link -s ../componen4');
+  console.log();
+  console.log('    # symlink component without installing dependents');
+  console.log('    $ component link -n ../componen5');
+  console.log();
+});
+
+// parse argv
+
+program.parse(process.argv);
+
+// links
+var links = [];
+var args = program.args;
+var compsDir = './components';
+var skipifexists = program.skip;
+var nodeps = program.nodeps;
+
+if (args.length == 0) program.help();
+
+// verify link target(s) exist
+args.forEach(function (arg) {
+    var target = arg;
+    if (!exists(target))
+        utils.fatal('Target path \'' + target + '\' does not exist.');
+    // load targets component.json
+    var conf = loadConfig(target);
+    // create, push link obj
+    var link = { target: target, conf: conf };
+    links.push(link);
+});
+
+// ensure ./components exists
+if(!exists(compsDir)) {
+    fs.mkdirSync(compsDir);
+}
+
+// symlink each target
+links.forEach(function (link) {
+    var linkName = repoToDir(link.conf.repo) || link.target.split(/[\/|\\]/).slice(-1)[0]
+    var linkDir = path.join(compsDir, linkName);
+    if (exists(linkDir)) {
+        if (!skipifexists) {
+            // Try unlink first
+            fs.unlink(linkDir, function (err) {
+                // if err then it's a real dir so rm -rf it
+                if (err) {
+                    utils.warn('info', 'Directory \'' + linkDir + '\'' + ' already exists, replacing with linked component.')
+                    rimraf(linkDir, createSymlink);
+                } else {
+                    createSymlink();
+                }
+            });
+        } else {
+            if (!nodeps) {
+                installDependencies(link.conf);
+            }
+        }
+    } else {
+        createSymlink();
+    }
+
+    function createSymlink() {
+        fs.symlink(link.target, linkDir, 'junction', function (err) {
+            if (err) utils.fatal(err);
+            if (!nodeps) {
+                installDependencies(link.conf);
+            }
+        });
+    }
+});
+
+/**
+ * Install dependencies given a component.json
+ */
+function installDependencies(conf) {
+    // ensure remotes, dependencies
+    conf.remotes = conf.remotes || [];
+    conf.remotes.push('https://raw.github.com');
+    var deps = conf.dependencies = conf.dependencies || [];
+    // install each dependent
+    Object.keys(deps).forEach(function (dep) {
+        var version = deps[dep];
+        version = (version == '*') ? 'master' : version;
+        if (!exists(path.join(compsDir, repoToDir(dep)))) {
+            install(conf, dep, version);
+        }
+    });
+}
+
+function loadConfig(from) {
+  var confPath = resolve(path.join(from, 'component.json'));
+  if (exists(confPath)) {
+    return require(confPath);
+  } else {
+    return {};
+  }
+}
+
+function repoToDir(repo) {
+    if(repo)
+        return repo.replace('/', '-');
+    return null;
+}
+
+// TODO: The following is a copy paste (barring a 'conf' parameter change in install) from component-install... 
+// @TJ you may want to refactor here...
+
+// reporter
+
+function report(pkg, options) {
+  options = options || {};
+  log('install', pkg.name + '@' + pkg.version);
+
+  pkg.on('error', function(err){
+    if (404 != err.status) utils.fatal(err.stack);
+
+    if (options.error) {
+      error(err.message);
+      process.exit(1);
+    }
+  });
+
+  pkg.on('dep', function(dep){
+    log('dep', dep.name + '@' + dep.version);
+    report(dep, options);
+  });
+
+  pkg.on('exists', function(dep){
+    log('exists', dep.name + '@' + dep.version);
+  });
+
+  pkg.on('file', function(file){
+    log('fetch', pkg.name + ':' + file);
+  });
+
+  pkg.on('end', function(){
+    log('complete', pkg.name);
+  });
+}
+
+// padding
+
+process.on('exit', function(){
+  console.log();
+});
+
+/**
+ * Install package `name` at the given `version`
+ * from all specified remotes.
+ *
+ * @param {String} name
+ * @param {String} version
+ * @api private
+ */
+
+function install(conf, name, version) {
+  var i = 0;
+
+  next();
+
+  function next() {
+    var remote = conf.remotes[i++];
+    if (!remote) return;
+
+    // parse remote
+    var last = i == conf.remotes.length - 1;
+    remote = url.parse(remote);
+
+    // strip trailing /
+    remote.href = remote.href.slice(0, -1);
+
+    // kick of installation
+    var pkg = component.install(name, version, {
+      dest: program.out,
+      force: program.force,
+      dev: program.dev,
+      remote: remote.href
+    });
+
+    // only error on the last remote otherwise
+    // we assume it may be fetchable
+    pkg.once('error', next);
+    report(pkg, { error: !last });
+
+    // TODO: add callback
+    pkg.install();
+  }
+}

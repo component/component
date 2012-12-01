@@ -20,6 +20,7 @@
     "jog": "0.4.0",
     "batch": "0.2.1",
     "win-spawn": "0.0.0",
+    "rimraf" : "*",
     "debug": "*"
   },
   "devDependencies": {
@@ -29,19 +30,7 @@
     "should": "*"
   },
   "bin": {
-    "component": "bin/component",
-    "component-info": "bin/component-info",
-    "component-help": "bin/component-help",
-    "component-install": "bin/component-install",
-    "component-ls": "bin/component-ls",
-    "component-convert": "bin/component-convert",
-    "component-build": "bin/component-build",
-    "component-search": "bin/component-search",
-    "component-create": "bin/component-create",
-    "component-open": "bin/component-open",
-    "component-changes": "bin/component-changes",
-    "component-wiki": "bin/component-wiki",
-    "component-docs": "bin/component-docs"
+    "component": "bin/component"
   },
   "main": "index",
   "engines": {
