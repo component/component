@@ -15,8 +15,8 @@ var program = require('commander')
   , exists = fs.existsSync
   , utils = component.utils
   , path = require('path')
-  , rimraf = require('rimraf')
-  , resolve = path.resolve;
+  , resolve = path.resolve
+  , rimraf = require('rimraf');
 
 // options
 
@@ -100,7 +100,9 @@ links.forEach(function (link) {
     }
 
     function createSymlink() {
-        fs.symlink(link.target, linkDir, 'junction', function (err) {
+        // note: sadly symlink appears to work differently on windows / linux, hence the fixup
+        var linkTarget = ((process.platform !== "win32") ? path.join('../', link.target) : link.target);
+        fs.symlink(linkTarget, linkDir, 'junction', function (err) {
             if (err) utils.fatal(err);
             if (!nodeps) {
                 installDependencies(link.conf);
