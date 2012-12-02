@@ -80,15 +80,11 @@ links.forEach(function (link) {
     var linkDir = path.join(compsDir, linkName);
     if (exists(linkDir)) {
         if (!skipifexists) {
-            // Try unlink first
-            fs.unlink(linkDir, function (err) {
-                // if err then it's a real dir so rm -rf it
-                if (err) {
-                    utils.warn('info', 'Directory \'' + linkDir + '\'' + ' already exists, replacing with linked component.')
-                    rimraf(linkDir, createSymlink);
-                } else {
-                    createSymlink();
-                }
+            // rm -rf on existing link dir
+            rimraf(linkDir, function (err) {
+                if (err) utils.fatal('Unable to replace link path \'' + linkDir + '\'.');
+                log('unlink', linkDir);
+                createSymlink();
             });
         } else {
             if (!nodeps) {
@@ -104,6 +100,7 @@ links.forEach(function (link) {
         var linkTarget = ((process.platform !== "win32") ? path.join('../', link.target) : link.target);
         fs.symlink(linkTarget, linkDir, 'junction', function (err) {
             if (err) utils.fatal(err);
+            log('link', linkDir + ' -> ' + linkTarget);
             if (!nodeps) {
                 installDependencies(link.conf);
             }
