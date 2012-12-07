@@ -5,7 +5,6 @@
  */
 
 var program = require('commander')
-  , spawn = require('win-spawn')
   , component = require('..')
   , utils = component.utils
   , log = utils.log
@@ -76,54 +75,54 @@ if(!exists(compsDir)) {
 
 // symlink each target
 links.forEach(function (link) {
-    var linkName = repoToDir(link.conf.repo) || link.target.split(/[\/|\\]/).slice(-1)[0]
-    var linkDir = path.join(compsDir, linkName);
-    if (exists(linkDir)) {
-        if (!skipifexists) {
-            // rm -rf on existing link dir
-            rimraf(linkDir, function (err) {
-                if (err) utils.fatal('Unable to replace link path \'' + linkDir + '\'.');
-                log('unlink', linkDir);
-                createSymlink();
-            });
-        } else {
-            if (!nodeps) {
-                installDependencies(link.conf);
-            }
-        }
-    } else {
+  var linkName = repoToDir(link.conf.repo) || link.target.split(/[\/|\\]/).slice(-1)[0]
+  var linkDir = path.join(compsDir, linkName);
+  if (exists(linkDir)) {
+    if (!skipifexists) {
+      // rm -rf on existing link dir
+      rimraf(linkDir, function (err) {
+        if (err) utils.fatal('Unable to replace link path \'' + linkDir + '\'.');
+        log('unlink', linkDir);
         createSymlink();
+      });
+    } else {
+      if (!nodeps) {
+        installDependencies(link.conf);
+      }
     }
+  } else {
+      createSymlink();
+  }
 
-    function createSymlink() {
-        // note: sadly symlink appears to work differently on windows / linux, hence the fixup
-        var linkTarget = ((process.platform !== "win32") ? path.join('../', link.target) : link.target);
-        fs.symlink(linkTarget, linkDir, 'junction', function (err) {
-            if (err) utils.fatal(err);
-            log('link', linkDir + ' -> ' + linkTarget);
-            if (!nodeps) {
-                installDependencies(link.conf);
-            }
-        });
-    }
+  function createSymlink() {
+    // note: sadly symlink appears to work differently on windows / linux, hence the fixup
+    var linkTarget = ((process.platform !== "win32") ? path.join('../', link.target) : link.target);
+    fs.symlink(linkTarget, linkDir, 'junction', function (err) {
+      if (err) utils.fatal(err);
+      log('link', linkDir + ' -> ' + linkTarget);
+      if (!nodeps) {
+        installDependencies(link.conf);
+      }
+    });
+  }
 });
 
 /**
  * Install dependencies given a component.json
  */
 function installDependencies(conf) {
-    // ensure remotes, dependencies
-    conf.remotes = conf.remotes || [];
-    conf.remotes.push('https://raw.github.com');
-    var deps = conf.dependencies = conf.dependencies || [];
-    // install each dependent
-    Object.keys(deps).forEach(function (dep) {
-        var version = deps[dep];
-        version = (version == '*') ? 'master' : version;
-        if (!exists(path.join(compsDir, repoToDir(dep)))) {
-            install(conf, dep, version);
-        }
-    });
+  // ensure remotes, dependencies
+  conf.remotes = conf.remotes || [];
+  conf.remotes.push('https://raw.github.com');
+  var deps = conf.dependencies = conf.dependencies || [];
+  // install each dependent
+  Object.keys(deps).forEach(function (dep) {
+    var version = deps[dep];
+    version = (version == '*') ? 'master' : version;
+    if (!exists(path.join(compsDir, repoToDir(dep)))) {
+      install(conf, dep, version);
+    }
+  });
 }
 
 function loadConfig(from) {
@@ -136,9 +135,9 @@ function loadConfig(from) {
 }
 
 function repoToDir(repo) {
-    if(repo)
-        return repo.replace('/', '-');
-    return null;
+  if(repo)
+    return repo.replace('/', '-');
+  return null;
 }
 
 // TODO: The following is a copy paste (barring a 'conf' parameter change in install) from component-install... 

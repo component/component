@@ -45,13 +45,13 @@ if(args.length == 0) {
 
 // remove existing linked components
 if (exists(compDir)) {
-    args.forEach(function (arg) {
-        var target = path.join(compDir, arg);
-        if (!exists(target))
-            return;
-        try {
-        fs.unlinkSync(target);
-        }
-        catch(e) { console.log('Skipping: ' + target + ' (not a symlink).'); }
-    });
+  args.forEach(function (arg) {
+    var target = path.join(compDir, arg);
+    if (!exists(target))
+      return;
+    try {
+      fs.unlinkSync(target);
+    }
+    catch(e) { console.log('Skipping: ' + target + ' (not a symlink).'); }
+  });
 }
