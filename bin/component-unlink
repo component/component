@@ -9,6 +9,7 @@ var program = require('commander')
   , fs = require('fs')
   , exists = fs.existsSync
   , utils = component.utils
+  , log = utils.log
   , path = require('path')
   , resolve = path.resolve
 
@@ -23,10 +24,10 @@ program.on('--help', function(){
   console.log('  Examples:');
   console.log();
   console.log('    # unlink a single linked component');
-  console.log('    $ component unlink component1');
+  console.log('    $ component unlink repo-tip');
   console.log();
   console.log('    # unlink multiple linked components');
-  console.log('    $ component unlink component2 component3');
+  console.log('    $ component unlink repo-tip dev-debug');
   console.log();
 });
 
@@ -36,22 +37,25 @@ program.parse(process.argv);
 
 // links
 var args = program.args;
-var compDir = './components';
+var comps = './components';
 
 // if no args try unlink all linked components
 if(args.length == 0) {
-    args = fs.readdirSync(compDir);
+    args = fs.readdirSync(comps);
 }
 
 // remove existing linked components
-if (exists(compDir)) {
+if (exists(comps)) {
   args.forEach(function (arg) {
-    var target = path.join(compDir, arg);
-    if (!exists(target))
+    var target = path.join(comps, arg);
+    if (!exists(target)) {
+      log('not found', target + ' does not exist.'); 
       return;
+    }
     try {
       fs.unlinkSync(target);
+      log('unlink', target);
     }
-    catch(e) { console.log('Skipping: ' + target + ' (not a symlink).'); }
+    catch(e) { log('skipping', target + ' (not a symlink).'); }
   });
 }

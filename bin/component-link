@@ -15,14 +15,16 @@ var program = require('commander')
   , utils = component.utils
   , path = require('path')
   , resolve = path.resolve
-  , rimraf = require('rimraf');
+  , rimraf = require('rimraf')
+  ;
 
 // options
 
 program
-  .usage('<path_to_dependent_component>')
+  .usage('[options] <component_directory>')
   .option('-s, --skip', 'skip if the component is already installed')
-  .option('-n, --nodeps', 'don\'t resolve dependents for this component');
+  .option('-n, --nodeps', 'don\'t resolve dependents for this component')
+  .option('-a, --all', 'symlink all components directory or matching search path(s)');
 
 // examples
 
@@ -30,16 +32,19 @@ program.on('--help', function(){
   console.log('  Examples:');
   console.log();
   console.log('    # symlink a single component');
-  console.log('    $ component link ../component1');
+  console.log('    $ component link ../repo/tip');
   console.log();
   console.log('    # symlink multiple components');
-  console.log('    $ component link ../component2 ../../tests/component3');
+  console.log('    $ component link ../repo/tip ../component/popover');
   console.log();
   console.log('    # symlink component only if it doesn\'t exist.');
-  console.log('    $ component link -s ../componen4');
+  console.log('    $ component link -s ../component/popover');
   console.log();
   console.log('    # symlink component without installing dependents');
-  console.log('    $ component link -n ../componen5');
+  console.log('    $ component link -n ../component/popover');
+  console.log();
+  console.log('    # symlink all components directory or matching search path(s)');
+  console.log('    $ component link -a ../repos ../dev-repo/com*');
   console.log();
 });
 
@@ -47,43 +52,84 @@ program.on('--help', function(){
 
 program.parse(process.argv);
 
-// links
+// locals
+
 var links = [];
 var args = program.args;
-var compsDir = './components';
+var comps = './components';
 var skipifexists = program.skip;
 var nodeps = program.nodeps;
+var all = program.all;
 
 if (args.length == 0) program.help();
 
-// verify link target(s) exist
-args.forEach(function (arg) {
-    var target = arg;
-    if (!exists(target))
-        utils.fatal('Target path \'' + target + '\' does not exist.');
-    // load targets component.json
-    var conf = loadConfig(target);
-    // create, push link obj
-    var link = { target: target, conf: conf };
+// repopulate args for --all option
+
+if(all) {
+  var dirs = [];
+  args.forEach(function(arg) {
+    var dir, regexp;
+    // possible wildcard
+    if(!exists(arg)) {
+      dir = path.dirname(arg);
+      if(!exists(dir)) utils.fatal('Path \'' + arg + '\' does not exist.');
+      // escape common regex characters & create regexp filter
+      regexp = path.basename(arg).replace(/(\^|\$|\(|\)|\<|\>|\[|\]|\{|\}|\.|\+|\?)/g, '\\$1');
+      regexp = '^' + regexp.replace(/\*/g, '.*') + '$'; 
+    } else {
+      dir = arg;
+    }
+    // ls + filter
+    fs.readdirSync(dir).forEach(function(file) {
+      if(!regexp || (regexp && file.match(new RegExp(regexp)))) {
+        var target = path.join(dir, file);
+        if(fs.statSync(target).isDirectory() && dirs.indexOf(target) < 0)
+          dirs.push(target);
+      }
+    });
+  });
+  args = dirs;
+}
+
+// build link info
+
+args.forEach(function(arg) {
+  var target = arg;
+  if (!exists(target)) utils.fatal('Target path \'' + target + '\' does not exist.');
+  
+  // load targets component.json
+  var conf = loadConfig(target);
+  if(conf) {
+    conf = ensureConf(conf, target);
+    // link
+    var link = {
+      target: target,
+      link: path.join(comps, repoDir(conf.repo)), 
+      conf: conf
+    }
+    // add to list
     links.push(link);
+  } else {
+    log('ignoring', 'Target path \'' + target + '\' missing \'component.json\', not a component.');
+  }
 });
 
 // ensure ./components exists
-if(!exists(compsDir)) {
-    fs.mkdirSync(compsDir);
+
+if(!exists(comps)) {
+    fs.mkdirSync(comps);
 }
 
 // symlink each target
+
 links.forEach(function (link) {
-  var linkName = repoToDir(link.conf.repo) || link.target.split(/[\/|\\]/).slice(-1)[0]
-  var linkDir = path.join(compsDir, linkName);
-  if (exists(linkDir)) {
+  if (exists(link.link)) {
     if (!skipifexists) {
       // rm -rf on existing link dir
-      rimraf(linkDir, function (err) {
-        if (err) utils.fatal('Unable to replace link path \'' + linkDir + '\'.');
-        log('unlink', linkDir);
-        createSymlink();
+      rimraf(link.link, function (err) {
+        if (err) utils.fatal('Unable to replace link path \'' + link.link + '\'.');
+        log('unlink', link.link);
+        createSymlink(link);
       });
     } else {
       if (!nodeps) {
@@ -91,53 +137,64 @@ links.forEach(function (link) {
       }
     }
   } else {
-      createSymlink();
-  }
-
-  function createSymlink() {
-    // note: sadly symlink appears to work differently on windows / linux, hence the fixup
-    var linkTarget = ((process.platform !== "win32") ? path.join('../', link.target) : link.target);
-    fs.symlink(linkTarget, linkDir, 'junction', function (err) {
-      if (err) utils.fatal(err);
-      log('link', linkDir + ' -> ' + linkTarget);
-      if (!nodeps) {
-        installDependencies(link.conf);
-      }
-    });
+      createSymlink(link);
   }
 });
 
-/**
- * Install dependencies given a component.json
- */
+// actually create the symlink and install dependencies
+
+function createSymlink(link) {
+  // note: sadly symlink appears to work differently on windows / linux, hence the fixup
+  var linkTarget = ((process.platform !== "win32") ? path.join('../', link.target) : link.target);
+  fs.symlink(linkTarget, link.link, 'junction', function (err) {
+    if (err) utils.fatal(err);
+    log('linked', link.link + ' -> ' + linkTarget);
+    if (!nodeps) {
+      installDependencies(link.conf);
+    }
+  });
+}
+
+// install dependencies given a component.json
+
 function installDependencies(conf) {
-  // ensure remotes, dependencies
-  conf.remotes = conf.remotes || [];
-  conf.remotes.push('https://raw.github.com');
-  var deps = conf.dependencies = conf.dependencies || [];
+  var deps = conf.dependencies;
   // install each dependent
   Object.keys(deps).forEach(function (dep) {
     var version = deps[dep];
     version = (version == '*') ? 'master' : version;
-    if (!exists(path.join(compsDir, repoToDir(dep)))) {
+    if (!exists(path.join(comps, repoDir(dep)))) {
       install(conf, dep, version);
     }
   });
 }
 
+// helpers
+
+// convert repo to component directory name
+function repoDir(repo) {
+  return repo.replace('/', '-');
+}
+
+// load component.json at from
 function loadConfig(from) {
   var confPath = resolve(path.join(from, 'component.json'));
   if (exists(confPath)) {
     return require(confPath);
-  } else {
-    return {};
-  }
+  } 
+  // not found
+  return null;
 }
 
-function repoToDir(repo) {
-  if(repo)
-    return repo.replace('/', '-');
-  return null;
+// ensure/default remotes, dependencies, etc
+function ensureConf(conf, target) {
+  conf = conf || {};
+  conf.remotes = conf.remotes || [];
+  conf.remotes.push('https://raw.github.com');
+  conf.dependencies = conf.dependencies || [];
+  // use the target directory name as the repo if it doesn't exist
+  conf.repo = conf.repo || target.split(/[\/|\\]/).slice(-1)[0];
+  return conf;
 }
 
 // TODO: The following is a copy paste (barring a 'conf' parameter change in install) from component-install... 
