@@ -24,7 +24,7 @@ program
   .usage('[options] <component_directory>')
   .option('-s, --skip', 'skip if the component is already installed')
   .option('-n, --nodeps', 'don\'t resolve dependents for this component')
-  .option('-a, --all', 'symlink all components directory or matching search path(s)');
+  .option('-w, --wildcard', 'symlink components using directory wildcard expansion if present');
 
 // examples
 
@@ -43,8 +43,8 @@ program.on('--help', function(){
   console.log('    # symlink component without installing dependents');
   console.log('    $ component link -n ../component/popover');
   console.log();
-  console.log('    # symlink all components directory or matching search path(s)');
-  console.log('    $ component link -a ../repos ../dev-repo/com*');
+  console.log('    # symlink components using directory wildcard expansion if present');
+  console.log('    $ component link -w ../repos/* ../dev-repo/com*');
   console.log();
 });
 
@@ -59,13 +59,13 @@ var args = program.args;
 var comps = './components';
 var skipifexists = program.skip;
 var nodeps = program.nodeps;
-var all = program.all;
+var wildcard = program.wildcard;
 
 if (args.length == 0) program.help();
 
 // repopulate args for --all option
 
-if(all) {
+if(wildcard) {
   var dirs = [];
   args.forEach(function(arg) {
     var dir, regexp;
@@ -79,15 +79,8 @@ if(all) {
     } else {
       dir = arg;
     }
-    // ls + filter
-    fs.readdirSync(dir).forEach(function(file) {
-      if(!regexp || (regexp && file.match(new RegExp(regexp)))) {
-        var target = path.join(dir, file);
-        if(fs.statSync(target).isDirectory() && dirs.indexOf(target) < 0)
-          dirs.push(target);
-      }
-    });
-  });
+
+    // if not a wildcard assume component folder    if(!regexp) {      if(dirs.indexOf(dir) < 0)        dirs.push(dir);    } else {      // ls + filter      fs.readdirSync(dir).forEach(function(file) {        if(file.match(new RegExp(regexp))) {          var target = path.join(dir, file);          if(fs.statSync(target).isDirectory() && dirs.indexOf(target) < 0)            dirs.push(target);        }      });    }  });
   args = dirs;
 }
 
@@ -132,6 +125,7 @@ links.forEach(function (link) {
         createSymlink(link);
       });
     } else {
+      log('skipping', link.link + ' (already exists).')
       if (!nodeps) {
         installDependencies(link.conf);
       }
