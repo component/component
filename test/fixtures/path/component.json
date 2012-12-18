@@ -4,5 +4,6 @@
     "bar": "*"
   },
   "scripts": ["index.js"],
+  "styles": ["index.css"],
   "paths": ["lib"]
 }
