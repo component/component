@@ -149,8 +149,8 @@ program.prompt(prompt, function(obj){
  */
 
 function bool(str) {
-  return 'yes' == str
-    || 'y' == str;
+  return 'yes' == str.toLowerCase()
+    || 'y' == str.toLowerCase();
 }
 
 /**
