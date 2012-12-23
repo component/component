@@ -108,8 +108,9 @@ builder.build(function(err, obj){
       '} else if (typeof define == "function" && define.amd) {',
       '  define(require("' + conf.name + '"));',
       '} else {',
-      '  window[' + name + '] = require("' + conf.name + '");',
-      '}'
+      '  window["' + name + '"] = require("' + conf.name + '");',
+      '}',
+      '\n'
     ];
   }
 
