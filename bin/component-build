@@ -90,7 +90,10 @@ builder.build(function(err, obj){
     ? standalone
     : conf.name;
 
-  css.write(obj.css);
+  obj.css.length
+    ? css.write(obj.css)
+    : fs.unlinkSync(css.path);
+
   if (standalone) js.write(';(function(){\n');
   js.write(obj.require);
   js.write(obj.js);
@@ -104,7 +107,7 @@ builder.build(function(err, obj){
   if (!program.verbose) return;
   var duration = new Date - start;
   log('write', js.path);
-  log('write', css.path);
+  obj.css.length && log('write', css.path);
   log('js', (obj.js.length / 1024 | 0) + 'kb');
   log('css', (obj.css.length / 1024 | 0) + 'kb');
   log('duration', duration + 'ms');
