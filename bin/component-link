@@ -186,8 +186,8 @@ function ensureConf(conf, target) {
   conf.remotes = conf.remotes || [];
   conf.remotes.push('https://raw.github.com');
   conf.dependencies = conf.dependencies || [];
-  // use the target directory name as the repo if it doesn't exist
-  conf.repo = conf.repo || target.split(/[\/|\\]/).slice(-1)[0];
+  // if no repo use repo name otherwise use target folder name (note: the "spec" says repo is mandatory but it appears it is not enforced)
+  conf.repo = conf.repo || conf.name || target.split(/[\/|\\]/).slice(-1)[0];
   return conf;
 }
 

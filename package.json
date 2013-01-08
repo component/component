@@ -1,6 +1,6 @@
 {
   "name": "component",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Component package manager consuming git repositories",
   "keywords": [
     "component",
@@ -15,11 +15,12 @@
     "commander": "1.0.5",
     "mkdirp": "0.3.4",
     "superagent": "0.10.0",
-    "component-builder": "0.5.1",
+    "component-builder": "0.6.1",
     "string-to-js": "0.0.1",
     "jog": "0.4.0",
     "batch": "0.2.1",
     "win-fork": "1.0.0",
+    "archy": "0.0.2",
     "rimraf" : "*",
     "debug": "*"
   },

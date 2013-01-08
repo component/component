@@ -7,9 +7,9 @@
   With [node](http://nodejs.org) previously installed:
 
      $ npm install -g component
-     
+
   With node binary on OSX:
-  
+
      $ (cd /usr/local && \
         curl -L# http://nodejs.org/dist/v0.8.15/node-v0.8.15-darwin-x86.tar.gz \
         | tar -zx --strip 1) \
@@ -38,6 +38,7 @@
  - [List](https://github.com/component/component/wiki/Components) of all available components
  - [Wiki](https://github.com/component/component/wiki)
  - [Mailing List](https://groups.google.com/group/componentjs)
+ - [Google+ Community](https://plus.google.com/u/0/communities/109771441994395167277)
  - component ["spec"](https://github.com/component/component/wiki/Spec)
  - join `#components` on freenode
  - follow [@component_js](http://twitter.com/component_js) on twitter
@@ -48,6 +49,11 @@
 
  - [Creating web components](https://vimeo.com/53730178)
  - [App integration introduction](https://vimeo.com/48054442)
+
+## Articles
+
+  - building a [date picker component](http://tjholowaychuk.com/post/37832588021/building-a-date-picker-component)
+  - original [component blog post](http://tjholowaychuk.com/post/27984551477/components)
 
 ## Usage
 
@@ -88,7 +94,7 @@ Commands:
 
 ```
 $ component install component/tip
-  
+
    install : component/tip@master
        dep : component/emitter@master
    install : component/emitter@master
@@ -154,7 +160,7 @@ $ component search ui
 
 ```
 name: popover
-description: Popover UI component 
+description: Popover UI component
 does this component have js? yes
 does this component have css? yes
 does this component have html? yes
@@ -233,10 +239,14 @@ $ make test
 ## Example applications
 
   Open source application examples:
-  
+
   - [Todo list](https://github.com/component/todo)
 
-## License 
+## Extensions
+
+ - [component-graph(1)](https://github.com/component/component-graph) dependency graphs for component projects
+
+## License
 
 (The MIT License)
 
