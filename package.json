@@ -46,5 +46,6 @@
   "main": "index",
   "engines": {
     "node": ">= 0.8.0"
-  }
+  },
+  "engineStrict": true
 }
