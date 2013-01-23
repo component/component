@@ -47,6 +47,8 @@ program.parse(process.argv);
 
 var conf = require(path.resolve('component.json'));
 
+if(!conf.name) throw new Error("This component is missing a name.");
+
 // standalone
 
 var standalone = program.standalone;
