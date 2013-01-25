@@ -5,11 +5,16 @@
  */
 
 var program = require('commander')
+  , fs = require('fs')
+  , path = require('path')
+  , resolve = path.resolve
+  , join = path.join
   , component = require('..');
 
 // usage
 
-program.usage('<name> [prop]');
+program.usage('<name> [prop]')
+  .option('-u, --unix', 'output arrays unix-style');
 
 // examples
 
@@ -39,9 +44,34 @@ var props = program.args.shift();
 // lookup info
 
 var parts = pkg.split('@');
+
 pkg = parts.shift();
 var version = parts.shift() || 'master';
-component.info(pkg, version, function(err, json){
+
+// local lookup
+function local(path, fn){
+  path = resolve(join(path, 'component.json'));
+  fs.readFile(path, 'utf8', function(err, data){
+    fn(err, JSON.parse(data))
+  });
+}
+
+function render(json){
+  // output
+  if ('string' == typeof json) {
+    process.stdout.write(json);
+  } else if (program.unix && Array.isArray(json)) {
+    json.forEach(function(x){
+      render(x);
+      process.stdout.write("\n");
+    });
+  } else if (json == null) {
+  } else {
+    process.stdout.write(JSON.stringify(json, null, 2));
+  }
+}
+
+function handle(err, json){
   if (err) throw err;
 
   // reduce props
@@ -51,11 +81,9 @@ component.info(pkg, version, function(err, json){
     });
   }
 
-  // output
-  if ('string' == typeof json) {
-    process.stdout.write(json);
-  } else {
-    process.stdout.write(JSON.stringify(json, null, 2));
-  }
-});
+  render(json);
+}
+
+if (pkg[0] == ".") local(pkg, handle);
+else component.info(pkg, version, handle);
 
