@@ -6,6 +6,8 @@
 
 var program = require('commander')
   , Builder = require('component-builder')
+  , requirejs = require('component-require')
+  , Batch = require('batch')
   , component = require('..')
   , utils = component.utils
   , log = component.utils.log
@@ -22,6 +24,8 @@ program
   .option('-n, --name <file>', 'base name for build files defaulting to build', 'build')
   .option('-v, --verbose', 'output verbose build information')
   .option('-p, --prefix <str>', 'prefix css asset urls with <str>')
+  .option('-c, --css', 'build css')
+  .option('-j, --js', 'build js')
 
 // examples
 
@@ -80,21 +84,19 @@ if (program.dev) {
   builder.addSourceURLs();
 }
 
-// build
 
-if (program.verbose) console.log();
-builder.build(function(err, obj){
-  if (err) utils.fatal(err.message);
-  var js = '';
-  var css = obj.css.trim();
+// js
+function buildScripts(err, js, fn){
+  if (err) return fn(err)
 
+  var out = '';
   var name = 'string' == typeof standalone
     ? standalone
     : conf.name;
 
-  if (standalone) js += ';(function(){\n';
-  js += obj.require;
-  js += obj.js;
+  if (standalone) out += ';(function(){\n';
+  out += requirejs;
+  out += js;
 
   if (standalone) {
     var umd = [
@@ -107,22 +109,80 @@ builder.build(function(err, obj){
       '}'
     ];
 
-    js += umd.join('\n');
-    js += '})();';
+    out += umd.join('\n');
+    out += '})();';
   }
 
-  // css
-  if (css) fs.writeFile(cssPath, css);
+  fs.writeFile(jsPath, out);
 
-  // js
-  fs.writeFile(jsPath, js);
+  if (program.verbose)
+    log('write', jsPath);
+    log('js', (out.length / 1024 | 0) + 'kb');
 
+  fn(null, js);
+}
+
+
+// css
+function buildStyles(fn){
+  builder.buildStyles(function(err, css){
+    if (err) return fn(err);
+    var css = css.trim();
+
+    if (program.verbose)
+      log('write', cssPath);
+      log('css', (css.length / 1024 | 0) + 'kb');
+
+    fs.writeFile(cssPath, css);
+
+    fn(null, css);
+  });
+}
+
+// build
+
+if (program.verbose) console.log();
+
+var buildables = ["js", "css"]
+  , toBuild = []
+  , batch = new Batch
+  , builders = {
+      js: function(fn){
+        var b = new Batch
+        b.push(builder.buildScripts.bind(builder))
+        b.push(builder.buildAliases.bind(builder))
+        b.end(function(err, res){
+          var js = res.shift() + '\n' + res.shift() + '\n' + builder._js;
+          buildScripts(err, js, fn);
+        });
+      }
+    , css: buildStyles
+  };
+
+// look for specific build flags
+buildables.forEach(function(buildable){
+  if (program[buildable])
+    toBuild.push(buildable);
+});
+
+// if no specific build flags, build everything
+if (toBuild.length === 0)
+  toBuild = buildables;
+
+// push buildables into our batch
+toBuild.forEach(function(buildable){
+  batch.push(builders[buildable]);
+});
+
+if (program.verbose)
+  log('building', toBuild)
+
+// run the batch
+batch.end(function(err){
+  if (err) utils.fatal(err);
   if (!program.verbose) return;
   var duration = new Date - start;
-  log('write', jsPath);
-  log('write', cssPath);
-  log('js', (js.length / 1024 | 0) + 'kb');
-  if (css) log('css', (css.length / 1024 | 0) + 'kb');
   log('duration', duration + 'ms');
   console.log();
 });
+
