@@ -12,6 +12,7 @@ var program = require('commander')
   , url = require('url')
   , fs = require('fs')
   , exists = fs.existsSync
+  , stats = fs.statSync
   , utils = component.utils
   , path = require('path')
   , resolve = path.resolve
@@ -21,10 +22,12 @@ var program = require('commander')
 // options
 
 program
-  .usage('[options] <component_directory>')
+  .usage('[options] <target_directory>')
   .option('-s, --skip', 'skip if the component is already installed')
   .option('-n, --no-deps', 'don\'t resolve dependents for this component')
-  .option('-w, --wildcard', 'symlink components using directory wildcard expansion if present');
+  .option('-w, --wildcard', 'symlink components using target directory wildcards')
+  .option('-t, --targets [file]', 'file with a list of targets to symlink (default: \'.symlinks\')')
+  ;
 
 // examples
 
@@ -43,8 +46,14 @@ program.on('--help', function(){
   console.log('    # symlink component without installing dependents');
   console.log('    $ component link -n ../component/popover');
   console.log();
-  console.log('    # symlink components using directory wildcard expansion if present');
+  console.log('    # symlink components using directory wildcard expansion');
   console.log('    $ component link -w ../repos/* ../dev-repo/com*');
+  console.log();
+  console.log('    # symlink components specified in a targets file');
+  console.log('    $ component link -t mytargets.txt');
+  console.log();
+  console.log('    # or assume the default targets file name of \'.symlinks\'');
+  console.log('    $ component link -t');
   console.log();
 });
 
@@ -60,10 +69,29 @@ var comps = './components';
 var skipifexists = program.skip;
 var deps = program.deps;
 var wildcard = program.wildcard;
+var targets = program.targets;
 
-if (args.length == 0) program.help();
+if(targets === true)
+  targets = '.symlinks';
 
-// repopulate args for --all option
+if (args.length == 0 && !targets) program.help();
+
+// repopulate args from targets if it exists
+if(targets) {
+  if(targets !== '.symlinks' && exists(targets) && stats(targets).isDirectory()) {
+    log('warn', 'assuming -t \'.symlinks\' since \'' + targets + '\' is a directory.');
+    args.push(targets);
+    targets = '.symlinks';
+  }
+  if(!exists(targets)) {
+    log('ignoring', '-t was specified but targets file \'' + targets + '\' was not found.');
+  } else {
+    var targets = fs.readFileSync(targets).toString().match(/[\S]+/gm);
+    args = args.concat(targets);
+  }
+}
+
+// repopulate args for --wildcard option
 
 if(wildcard) {
   var dirs = [];
@@ -80,7 +108,7 @@ if(wildcard) {
       dir = arg;
     }
 
-    // if not a wildcard assume component folder    if(!regexp) {      if(dirs.indexOf(dir) < 0)        dirs.push(dir);    } else {      // ls + filter      fs.readdirSync(dir).forEach(function(file) {        if(file.match(new RegExp(regexp))) {          var target = path.join(dir, file);          if(fs.statSync(target).isDirectory() && dirs.indexOf(target) < 0)            dirs.push(target);        }      });    }  });
+    // if not a wildcard assume component folder    if(!regexp) {      if(dirs.indexOf(dir) < 0)        dirs.push(dir);    } else {      // ls + filter      fs.readdirSync(dir).forEach(function(file) {        if(file.match(new RegExp(regexp))) {          var target = path.join(dir, file);          if(stats(target).isDirectory() && dirs.indexOf(target) < 0)            dirs.push(target);        }      });    }  });
   args = dirs;
 }
 
