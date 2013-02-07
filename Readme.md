@@ -82,7 +82,7 @@ Commands:
   build                   build the component
   ls                      list installed components
   link <target-dir>       symlink local component into current component
-  unlink [<comp-dir>]     remove symlinked component(s)
+  unlink [comp-dir]       remove symlinked component(s)
 
 ```
 
