@@ -39,13 +39,12 @@ program.parse(process.argv);
 var args = program.args;
 var comps = './components';
 
-// if no args try unlink all linked components
-if(args.length == 0) {
-    args = fs.readdirSync(comps);
-}
-
 // remove existing linked components
 if (exists(comps)) {
+  // if no args try unlink all linked components
+  if(args.length == 0) {
+      args = fs.readdirSync(comps);
+  }
   args.forEach(function (arg) {
     var target = path.join(comps, arg);
     if (!exists(target)) {
