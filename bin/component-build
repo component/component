@@ -11,6 +11,7 @@ var program = require('commander')
   , log = component.utils.log
   , path = require('path')
   , fs = require('fs')
+  , exists = fs.existsSync || path.existsSync
   , mkdir = require('mkdirp');
 
 // options
@@ -22,6 +23,8 @@ program
   .option('-n, --name <file>', 'base name for build files defaulting to build', 'build')
   .option('-v, --verbose', 'output verbose build information')
   .option('-p, --prefix <str>', 'prefix css asset urls with <str>')
+  .option('-c, --copy', 'copy files instead of linking')
+  .option('-u, --use <name>', 'use the given build plugin(s)')
 
 // examples
 
@@ -36,6 +39,9 @@ program.on('--help', function(){
   console.log();
   console.log('    # build standalone as window.$');
   console.log('    $ component build --standalone $');
+  console.log();
+  console.log('    # build with plugins');
+  console.log('    $ component build -u foo,bar,baz');
   console.log();
 });
 
@@ -63,6 +69,7 @@ mkdir.sync(program.out);
 // build
 
 var builder = new Builder(process.cwd());
+if (program.copy) builder.copyFiles();
 builder.copyAssetsTo(program.out);
 if (program.dev) builder.prefixUrls('./');
 if (program.prefix) builder.prefixUrls(program.prefix);
@@ -70,6 +77,18 @@ if (program.prefix) builder.prefixUrls(program.prefix);
 // lookup paths
 
 if (conf.paths) builder.addLookup(conf.paths);
+
+// require middleware plugins
+if (program.use) {
+  var modules = program.use.split(',');
+  modules.forEach(function(mod){
+    var resolved = path.resolve(mod)
+      , real = exists(resolved) || exists(resolved + '.js')
+      , module = path.resolve('node_modules', mod);
+
+    builder.use(real ? require(resolved) : require(module));
+  });
+}
 
 var start = new Date;
 
@@ -101,7 +120,7 @@ builder.build(function(err, obj){
       'if (typeof exports == "object") {',
       '  module.exports = require("' + conf.name + '");',
       '} else if (typeof define == "function" && define.amd) {',
-      '  define(require("' + conf.name + '"));',
+      '  define(function(){ return require("' + conf.name + '"); });',
       '} else {',
       '  window["' + name + '"] = require("' + conf.name + '");',
       '}'

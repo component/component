@@ -237,6 +237,7 @@ $ make test
   - Damián Suárez
   - Tim Oxley
   - Jeremy Worboys
+  - Nick Jackson
 
 ## Example applications
 
