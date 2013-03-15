@@ -99,7 +99,7 @@ program.prompt(prompt, function(obj){
   if (!local) conf.keywords = [];
   conf.dependencies = {};
   conf.development = {};
-  if (!local) conf.license = "MIT";
+  if (!local) conf.license = "Unlicense";
 
   // dir
   console.log();
