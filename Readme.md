@@ -55,6 +55,7 @@
 
   - building a [date picker component](http://tjholowaychuk.com/post/37832588021/building-a-date-picker-component)
   - original [component blog post](http://tjholowaychuk.com/post/27984551477/components)
+  - [Modern Client-Side Component Development](http://webandphp.com/ModernClientSideComponentDevelopment)
 
 ## Usage
 
