@@ -104,7 +104,7 @@ if (program.dev) {
 
 if (program.verbose) console.log();
 builder.build(function(err, obj){
-  if (err) utils.fatal(err.message);
+  if (err) utils.fatal(err.message || err);
   var js = '';
   var css = obj.css.trim();
 
