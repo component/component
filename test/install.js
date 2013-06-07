@@ -67,8 +67,15 @@ describe('component install', function(){
         done();
       })
     })
-  })
 
+    it('should install dependencies through chain of local dependencies', function(done){
+      exec('cd test/fixtures/local && ../../../component install', function(err, stdout){
+        if (err) return done(err);
+        done();
+      })
+    })
+
+  })
   describe('[name...]', function(){
     it('should install the multiple components', function(done){
       exec('bin/component install component/overlay component/zepto', function(err, stdout){
