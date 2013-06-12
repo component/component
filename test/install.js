@@ -69,7 +69,7 @@ describe('component install', function(){
     })
 
     it('should install dependencies through chain of local dependencies', function(done){
-      exec('cd test/fixtures/local && ../../../component install', function(err, stdout){
+      exec('cd test/fixtures/local && ../../../bin/component install', function(err, stdout){
         if (err) return done(err);
         done();
       })
