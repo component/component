@@ -162,7 +162,7 @@ function report(pkg, options) {
       process.exit(1);
     }
 
-    error(err.message);
+    utils.warn('warning', err.message);
   });
 
   if (program.verbose) {
@@ -208,7 +208,8 @@ function install(name, version) {
     dest: program.out,
     force: program.force,
     dev: program.dev,
-    remotes: conf.remotes
+    remotes: conf.remotes,
+    concurrency: 10
   });
 
   report(pkg);
