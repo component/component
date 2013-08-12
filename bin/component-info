@@ -4,8 +4,9 @@
  * Module dependencies.
  */
 
-var program = require('commander')
-  , component = require('..');
+var program = require('commander');
+var component = require('..');
+var utils = component.utils;
 
 // usage
 
@@ -31,6 +32,10 @@ program.parse(process.argv);
 // package
 
 var pkg = program.args.shift();
+
+// required
+
+if (!pkg) utils.fatal('<name> required');
 
 // props
 

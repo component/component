@@ -33,18 +33,25 @@ describe('component build', function(){
     exec('cd test/fixtures/path && ' + bin + '-build -v -u ../plugin', function(err, stdout){
       if (err) return done(err);
       stdout.should.include('middleware fired!');
-      stdout.should.include('builder config fired!');
       done();
     })
   })
-  
+
   it('should require middleware with absolute path', function(done){
     var plugin = path.join(__dirname, 'fixtures', 'plugin');
     exec('cd test/fixtures/path && ' + bin + '-build -v -u ' + plugin, function(err, stdout){
       if (err) return done(err);
       stdout.should.include('middleware fired!');
-      stdout.should.include('builder config fired!');
       done();
     })
   })
+
+  it('should exclude the js file if no scripts, and the css file if no styles', function(done){
+    exec('cd test/fixtures/no-js-css && ' + bin + '-build -v', function(err, stdout){
+      if (err) return done(err);
+      stdout.should.not.include('js :');
+      stdout.should.not.include('css :');
+      done();
+    });
+  });
 })

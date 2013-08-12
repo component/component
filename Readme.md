@@ -77,7 +77,6 @@ Commands:
   convert <file ...>      convert html files to js modules
   info <name> [prop]      output json component information
   changes <name>          output changelog contents
-  docs <name>             output readme contents
   wiki                    open the components list wiki page
   build                   build the component
   ls                      list installed components
@@ -135,7 +134,7 @@ $ component search ui
 
 ```
 
-## Using Github as a registry
+## Using GitHub as a registry
 
   By using GitHub as the registry, `component(1)` is automatically
   available to you without further explicit knowledge or work
@@ -157,7 +156,7 @@ $ component search ui
 
   The `component-create(1)` command can create a component
   project skeleton for you by filling out the prompts. Once
-  this repo is published to Github, you're all done!
+  this repo is published to GitHub, you're all done!
 
 ```
 name: popover
@@ -186,7 +185,7 @@ does this component have html? yes
   should be converted to a `require()`-able module. It is recommended that public
   components shared within the community use regular HTML templates, and regular
   CSS stylesheets to maximize contributions, however if you wish to use alternate
-  technologies just make sure to compile them before publishing them to Github.
+  technologies just make sure to compile them before publishing them to GitHub.
 
   For the recommended use-case of regular HTML, the `component-convert(1)` command
   will translate a regular HTML file to its `require()`-able JavaScript counterpart.
@@ -201,6 +200,16 @@ does this component have html? yes
   profile or session while developing component, otherwise `./bin/component`
   will have a hard time finding the sub-commands.
 
+## Using private components
+
+  `component(1)` uses [~/.netrc](http://man.cx/netrc(4), like other tools such as [curl](http://man.cx/curl) and [git](http://git-scm.com/), to specify credentials for remote hosts. Simply create a `~/.netrc` file in the home directory:
+
+```
+machine raw.github.com
+  login visionmedia
+  password pass123
+```
+
 ## Running tests
 
 Make sure dependencies are installed:
@@ -214,14 +223,6 @@ Then run:
 ```
 $ make test
 ```
-
-## Shout-outs
-
-  The concept of components themselves are nothing new, Drupal
-  for example has been doing this for years, however it seemed the concept was never
-  really translated to the client. My hope is that other communities will re-implement this
-  simple tool in their language of choice (or use this one) so that we can all consume components
-  easily.
 
 ## Contributors
 
@@ -238,14 +239,17 @@ $ make test
   - Tim Oxley
   - Jeremy Worboys
   - Nick Jackson
+  - Cameron Bytheway
 
 ## Example applications
 
   Open source application examples:
 
-  - [Todo list](https://github.com/component/todo)
-  - [Component.io](https://github.com/component/component.io)
+  - Example using [script tags](https://github.com/component/script-tag-example) for integrating component with existing non-commonjs applications or frameworks
+  - [Todo list](https://github.com/component/todo) example comprised of private and public components
+  - [Component.io](https://github.com/component/component.io) website
   - [Posty](https://github.com/visionmedia/posty)
+  - [NoFlo](noflojs.org) flow-based programming environment
 
 ## Extensions
 

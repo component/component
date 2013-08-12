@@ -4,18 +4,25 @@
  * Module dependencies.
  */
 
-var program = require('commander')
-  , component = require('..')
-  , archy = require('archy')
-  , path = require('path')
-  , resolve = path.resolve
-  , lookup = component.lookup
+var program = require('commander');
+var component = require('..');
+var archy = require('archy');
+var path = require('path');
+var resolve = path.resolve;
+var lookup = component.lookup;
+var fs = require('fs');
+var exists = fs.existsSync;
+var utils = component.utils;
 
 // parse argv
 
 program
   .option('-d, --depth <n>', 'set the depth to <n>', Infinity)
   .parse(process.argv);
+
+// component.json required
+
+if (!exists('component.json')) utils.fatal('missing component.json');
 
 // output tree
 

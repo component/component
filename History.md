@@ -1,4 +1,104 @@
 
+0.17.0 / 2013-07-19 
+==================
+
+ * update builder
+
+0.16.8 / 2013-07-17 
+==================
+
+ * fix dups reported in install output. Closes #372
+ * fix corrupt downloads with quick superagent replacement. Closes #374
+
+0.16.7 / 2013-07-05 
+==================
+
+ * update superagent for unzip fixes
+
+0.16.6 / 2013-07-02 
+==================
+
+ * update superagent
+ * fix node 0.8 issues when installing partial files
+ * remove OAuth in .netrc instructions
+
+0.16.5 / 2013-06-26 
+==================
+
+ * update superagent
+ * fixing resolve bug for node 0.10+
+
+0.16.4 / 2013-06-18 
+==================
+
+ * fix build of empty js files when no js is present
+ * fix installation of local dependencies via lookup paths
+ * fix removal of semi-installed components
+
+0.16.3 / 2013-06-06 
+==================
+
+ * update builder
+
+0.16.2 / 2013-05-31 
+==================
+
+ * add dev url prefixing back
+
+0.16.1 / 2013-05-30 
+==================
+
+ * add mtime update of output directory on install. Closes #344
+ * fix component-install(1) --dev, manip .development not .dependencies Closes #177
+
+0.16.0 / 2013-05-13 
+==================
+
+  * add netrc support
+  * add `component-install(1)` --verbose
+  * add .demo, closes #254
+  * add -v, --verbose to component-search(1) with license / version. Closes #317
+  * add `--no-require` to `component-build(1)` 
+  * remove component-docs(1)
+  * fix: inFlight components do not emit `end` events
+
+0.15.1 / 2013-04-26 
+==================
+
+  * update builder for root-level main alias fix
+
+0.15.0 / 2013-04-24 
+==================
+
+  * update builder
+
+0.14.0 / 2013-04-23 
+==================
+
+  * add .main to component-create(1) generated component.json for clarity
+  * add component-info(1) tests
+  * add Package#url() default of first remote
+  * remove .addLookup() from component-build(1), now performed in Builder
+  * update builder
+  * fix a call to fn() that should be done()
+  * fix UMD: use "this" instead of window for global
+
+0.13.2 / 2013-03-26 
+==================
+
+  * change error handling to treat non-404s as fatals
+  * fix exit status of component(1)  
+  * fix current .remote usage in Package 
+
+0.13.1 / 2013-03-19 
+==================
+
+  * update builder
+  * fix component-info(1)
+  * fix: install: do not create component.json if it doesn't exist
+  * fix fatal detection
+  * add explicit remotes using `-r <url>`
+
 0.13.0 / 2013-02-24 
 ==================
 

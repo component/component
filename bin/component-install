@@ -4,24 +4,26 @@
  * Module dependencies.
  */
 
-var program = require('commander')
-  , component = require('..')
-  , fs = require('fs')
-  , exists = fs.existsSync
-  , utils = component.utils
-  , log = utils.log
-  , error = utils.error
-  , url = require('url')
-  , path = require('path')
-  , resolve = path.resolve
+var program = require('commander');
+var component = require('..');
+var fs = require('fs');
+var exists = fs.existsSync;
+var utils = component.utils;
+var log = utils.log;
+var error = utils.error;
+var url = require('url');
+var path = require('path');
+var resolve = path.resolve;
 
 // options
 
 program
   .usage('[name ...]')
   .option('-d, --dev', 'install development dependencies')
-  .option('-o, --out <dir>', 'output components to the given <dir>')
+  .option('-r, --remotes <urls>', 'remotes to try installing from')
+  .option('-o, --out <dir>', 'output components to the given <dir>', 'components')
   .option('-f, --force', 'force installation even if previously installed')
+  .option('-v, --verbose', 'verbose output')
 
 // examples
 
@@ -60,6 +62,10 @@ var pkgs = program.args;
 
 var local = 0 == pkgs.length;
 
+// component.json required
+
+if (local && !exists('component.json')) utils.fatal('missing component.json');
+
 // read json
 
 var conf = loadConfig();
@@ -89,21 +95,15 @@ if (local) {
   }
 }
 
-// save to ./component.json
-
-if (!local) {
-  conf.dependencies = conf.dependencies || {};
-  pkgs.forEach(function(pkg){
-    pkg = parsePackage(pkg);
-    conf.dependencies[pkg.name] = pkg.version || '*';
-  });
-  saveConfig();
-}
-
 // implicit remotes
 
 conf.remotes = conf.remotes || [];
-conf.remotes.push('https://raw.github.com');
+
+// explicit remotes
+
+if (program.remotes) {
+  conf.remotes = program.remotes.split(',').concat(conf.remotes);
+}
 
 // install
 
@@ -139,29 +139,42 @@ function report(pkg, options) {
   log('install', pkg.name + '@' + pkg.version);
 
   pkg.on('error', function(err){
-    if (404 != err.status) utils.fatal(err.stack);
-
     if (err.fatal) {
       error(err.message);
       process.exit(1);
     }
+
+    utils.warn('warning', err.message);
   });
 
-  pkg.on('dep', function(dep){
-    log('dep', dep.name + '@' + dep.version);
-    report(dep, options);
-  });
+  if (program.verbose) {
+    pkg.on('dep', function(dep){
+      log('dep', dep.name + '@' + dep.version);
+      report(dep, options);
+    });
 
-  pkg.on('exists', function(dep){
-    log('exists', dep.name + '@' + dep.version);
-  });
+    pkg.on('exists', function(dep){
+      log('exists', dep.name + '@' + dep.version);
+    });
 
-  pkg.on('file', function(file){
-    log('fetch', pkg.name + ':' + file);
-  });
+    pkg.on('file', function(file){
+      log('fetch', pkg.name + ':' + file);
+    });
+  }
 
   pkg.on('end', function(){
     log('complete', pkg.name);
+
+    // save to ./component.json
+
+    if (!local) {
+      var key = program.dev ? 'development' : 'dependencies';
+
+      conf[key] = conf[key] || {};
+      conf[key][pkg.name] = pkg.version === 'master' ? '*' : pkg.version;
+
+      if (exists('component.json')) saveConfig();
+    }
   });
 }
 
@@ -181,18 +194,36 @@ process.on('exit', function(){
  */
 
 function install(name, version) {
+  touch(program.out);
+
   // kick off installation
   var pkg = component.install(name, version, {
     dest: program.out,
     force: program.force,
     dev: program.dev,
-    remotes: conf.remotes
+    remotes: conf.remotes.concat('https://raw.github.com'), // default to github
+    concurrency: 10
   });
 
   report(pkg);
 
   // TODO: add callback
   pkg.install();
+}
+
+/**
+ * Touch `path` when present.
+ *
+ * @param {String} path
+ * @api private
+ */
+
+function touch(path) {
+  try {
+    fs.utimesSync(path, new Date, new Date);
+  } catch (err) {
+    // ignore
+  }
 }
 
 /**

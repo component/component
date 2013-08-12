@@ -27,11 +27,18 @@ describe('component install', function(){
   })
 
   describe('[name]', function(){
+    it('should show an error message if the component is named incorrectly', function(done) {
+      exec('bin/component install component-emitter', function(err, stdout) {
+        if(err) return done(err);
+        stdout.should.include('install');
+        done();
+      })
+    })
+
     it('should install a single component', function(done){
       exec('bin/component install component/emitter', function(err, stdout){
         if (err) return done(err);
         stdout.should.include('install');
-        stdout.should.include('fetch');
         stdout.should.include('complete');
         var json = require(path.resolve('components/component-emitter/component.json'));
         json.name.should.equal('emitter');
@@ -52,12 +59,29 @@ describe('component install', function(){
       exec('bin/component install component/overlay', function(err, stdout){
         if (err) return done(err);
         stdout.should.include('install');
-        stdout.should.include('fetch');
         stdout.should.include('complete');
         var json = require(path.resolve('components/component-emitter/component.json'));
         json.name.should.equal('emitter');
         var json = require(path.resolve('components/component-overlay/component.json'));
         json.name.should.equal('overlay');
+        done();
+      })
+    })
+
+    it('should install dependencies through chain of local dependencies', function(done){
+      exec('cd test/fixtures/local && ../../../bin/component install', function(err, stdout){
+        if (err) return done(err);
+        done();
+      })
+    })
+
+    it('should download files completely', function(done){
+      exec('bin/component install timoxley/font-awesome@3.2.1', function(err, stdout){
+        if (err) return done(err);
+        var stats = fs.statSync(path.resolve('components/timoxley-font-awesome/font/fontawesome-webfont.woff'));
+        stats.size.should.equal(43572);
+        stdout.should.include('install');
+        stdout.should.include('complete');
         done();
       })
     })
@@ -68,7 +92,6 @@ describe('component install', function(){
       exec('bin/component install component/overlay component/zepto', function(err, stdout){
         if (err) return done(err);
         stdout.should.include('install');
-        stdout.should.include('fetch');
         stdout.should.include('complete');
         var json = require(path.resolve('components/component-emitter/component.json'));
         json.name.should.equal('emitter');
@@ -85,7 +108,6 @@ describe('component install', function(){
     exec('bin/component install', function(err, stdout){
       if (err) return done(err);
       stdout.should.include('install');
-      stdout.should.include('fetch');
       stdout.should.include('complete');
       var json = require(path.resolve('components/component-emitter/component.json'));
       json.name.should.equal('emitter');
@@ -102,7 +124,6 @@ describe('component install', function(){
     exec('bin/component install -d', function(err, stdout){
       if (err) return done(err);
       stdout.should.include('install');
-      stdout.should.include('fetch');
       stdout.should.include('complete');
       var json = require(path.resolve('components/component-emitter/component.json'));
       json.name.should.equal('emitter');
@@ -119,7 +140,6 @@ describe('component install', function(){
     exec('bin/component add component/emitter', function(err, stdout){
       if (err) return done(err);
       stdout.should.include('install');
-      stdout.should.include('fetch');
       stdout.should.include('complete');
       var json = require(path.resolve('components/component-emitter/component.json'));
       json.name.should.equal('emitter');
