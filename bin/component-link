@@ -64,8 +64,8 @@ program.parse(process.argv);
 // locals
 
 var links = [];
-var args = program.args;
 var comps = './components';
+var args = program.args;
 var skipifexists = program.skip;
 var deps = program.deps;
 var wildcard = program.wildcard;
@@ -226,32 +226,46 @@ function ensureConf(conf, target) {
 
 function report(pkg, options) {
   options = options || {};
+  if (pkg.inFlight) return;
   log('install', pkg.name + '@' + pkg.version);
 
   pkg.on('error', function(err){
-    if (404 != err.status) utils.fatal(err.stack);
-
-    if (options.error) {
+    if (err.fatal) {
       error(err.message);
       process.exit(1);
     }
+
+    utils.warn('warning', err.message);
   });
 
-  pkg.on('dep', function(dep){
-    log('dep', dep.name + '@' + dep.version);
-    report(dep, options);
-  });
+  if (program.verbose) {
+    pkg.on('dep', function(dep){
+      log('dep', dep.name + '@' + dep.version);
+      report(dep, options);
+    });
 
-  pkg.on('exists', function(dep){
-    log('exists', dep.name + '@' + dep.version);
-  });
+    pkg.on('exists', function(dep){
+      log('exists', dep.name + '@' + dep.version);
+    });
 
-  pkg.on('file', function(file){
-    log('fetch', pkg.name + ':' + file);
-  });
+    pkg.on('file', function(file){
+      log('fetch', pkg.name + ':' + file);
+    });
+  }
 
   pkg.on('end', function(){
     log('complete', pkg.name);
+
+    // save to ./component.json
+
+//    if (!local) {
+//      var key = program.dev ? 'development' : 'dependencies';
+//
+//      conf[key] = conf[key] || {};
+//      conf[key][pkg.name] = pkg.version === 'master' ? '*' : pkg.version;
+//
+//      if (exists('component.json')) saveConfig();
+//    }
   });
 }
 
@@ -262,7 +276,7 @@ process.on('exit', function(){
 });
 
 /**
- * Install package `name` at the given `version`
+ * Install package `name` at the given, 'conf'ig and `version`
  * from all specified remotes.
  *
  * @param {Object} conf
@@ -270,18 +284,35 @@ process.on('exit', function(){
  * @param {String} version
  * @api private
  */
-
 function install(conf, name, version) {
+  touch(program.out);
+
   // kick off installation
   var pkg = component.install(name, version, {
     dest: program.out,
     force: program.force,
     dev: program.dev,
-    remotes: conf.remotes
+    remotes: conf.remotes,
+    concurrency: 10
   });
 
   report(pkg);
 
   // TODO: add callback
   pkg.install();
+}
+
+/**
+ * Touch `path` when present.
+ *
+ * @param {String} path
+ * @api private
+ */
+
+function touch(path) {
+  try {
+    fs.utimesSync(path, new Date, new Date);
+  } catch (err) {
+    // ignore
+  }
 }
