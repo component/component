@@ -6,7 +6,7 @@
 
 var program = require('commander');
 var str2js = require('string-to-js');
-var component = require('..');
+var component = require('../');
 var utils = component.utils;
 var path = require('path');
 var fs = require('fs');

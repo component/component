@@ -5,7 +5,7 @@
  */
 
 var program = require('commander');
-var component = require('..');
+var component = require('../');
 var archy = require('archy');
 var path = require('path');
 var resolve = path.resolve;

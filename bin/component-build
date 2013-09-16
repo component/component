@@ -6,7 +6,7 @@
 
 var program = require('commander');
 var Builder = require('component-builder');
-var component = require('..');
+var component = require('../');
 var utils = component.utils;
 var log = component.utils.log;
 var path = require('path');

@@ -5,7 +5,7 @@
  */
 
 var program = require('commander');
-var component = require('..');
+var component = require('../');
 var fs = require('fs');
 var exists = fs.existsSync;
 var utils = component.utils;
