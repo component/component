@@ -5,7 +5,7 @@
  */
 
 var program = require('commander')
-  , component = require('..')
+  , component = require('../')
   , utils = component.utils;
 
 // usage
