@@ -19,7 +19,7 @@ var mkdir = require('mkdirp');
 program
   .option('-d, --dev', 'build development dependencies')
   .option('-s, --standalone <name>', 'build a stand-alone version of the component')
-  .option('-C, --no-common', 'build a stand-alone version without common.js loaders')
+  .option('-g, --global', 'when building stand-alone, build without common.js loaders')
   .option('-o, --out <dir>', 'output directory defaulting to ./build', 'build')
   .option('-n, --name <file>', 'base name for build files defaulting to build', 'build')
   .option('-p, --prefix <str>', 'prefix css asset urls with <str>')
@@ -42,8 +42,8 @@ program.on('--help', function(){
   console.log('    # build standalone as window.$');
   console.log('    $ component build --standalone $');
   console.log();
-  console.log('    # build standalone without common.js loaders');
-  console.log('    $ component build --standalone $ --no-common');
+  console.log('    # when standalone, build without common.js loaders');
+  console.log('    $ component build --standalone $ --global');
   console.log();
   console.log('    # build with plugins');
   console.log('    $ component build -u foo,bar,baz');
@@ -122,7 +122,9 @@ builder.build(function(err, obj){
     js += obj.js;
 
     if (standalone) {
-      if (program.common) {
+      if (program.global) {
+        js += '\n\nthis["' + name + '"] = require("' + conf.name + '");\n';
+      } else {
         var umd = [
           '\n',
           'if (typeof exports == "object") {',
@@ -134,8 +136,6 @@ builder.build(function(err, obj){
           '}'
         ];
         js += umd.join('\n');
-      } else {
-        js += '\n\nthis["' + name + '"] = require("' + conf.name + '");\n';
       }
       js += '})();';
     }
