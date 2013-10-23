@@ -43,7 +43,7 @@ program.on('--help', function(){
   console.log('    $ component build --standalone $');
   console.log();
   console.log('    # build standalone without common.js loaders');
-  console.log('    $ component build --no-common $');
+  console.log('    $ component build --standalone $ --no-common');
   console.log();
   console.log('    # build with plugins');
   console.log('    $ component build -u foo,bar,baz');
