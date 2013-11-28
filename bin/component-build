@@ -26,6 +26,8 @@ program
   .option('-u, --use <name>', 'use the given build plugin(s)')
   .option('-R, --no-require', 'exclude require from build')
   .option('-v, --verbose', 'verbose output')
+  .option('-m, --mode <js|css>', 'build only js or css')
+
 
 // examples
 
@@ -49,6 +51,15 @@ program.on('--help', function(){
 // parse argv
 
 program.parse(process.argv);
+
+// check mode option
+
+if (program.mode) {
+  if (program.mode !== 'css' && program.mode !== 'js') {
+    console.log('invalid mode: '+ program.mode);
+    process.exit(1);
+  }
+}
 
 // component.json required
 
@@ -134,17 +145,26 @@ builder.build(function(err, obj){
   }
 
   // css
-  if (css) fs.writeFile(cssPath, css);
+  if (css && (!program.mode || program.mode == 'css')) {
+    fs.writeFile(cssPath, css);
+  }
 
   // js
-  if (js) fs.writeFile(jsPath, js);
+  if (js && (!program.mode || program.mode === 'js')) {
+    fs.writeFile(jsPath, js);
+  }
 
   if (!program.verbose) return;
   var duration = new Date - start;
-  log('write', jsPath);
-  log('write', cssPath);
-  if (js) log('js', (js.length / 1024 | 0) + 'kb');
-  if (css) log('css', (css.length / 1024 | 0) + 'kb');
+  
+  if (js && (!program.mode || program.mode === 'js')) {
+    log('write', jsPath);
+    log('js', (js.length / 1024 | 0) + 'kb');
+  }
+  if (css && (!program.mode || program.mode == 'css')) {
+    log('write', cssPath);
+    log('css', (css.length / 1024 | 0) + 'kb');
+  }
   log('duration', duration + 'ms');
   console.log();
 });
