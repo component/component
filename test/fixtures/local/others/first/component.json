@@ -5,6 +5,9 @@
   "dependencies": {
     "component/overlay": "*"
   },
+  "development":{
+    "chaijs/chai":"*"
+  },
   "main": "index.js",
   "scripts": [
     "index.js"

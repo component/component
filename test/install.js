@@ -75,6 +75,15 @@ describe('component install', function(){
       })
     })
 
+    it('should install development dependencies through chain of local dependencies', function(done){
+      var proc = exec('cd test/fixtures/local && ../../../bin/component install --dev', function(err, stdout){
+        if (err) return done(err);
+        var exists = fs.existsSync(path.resolve(__dirname, 'fixtures','local','components','chaijs-chai'));
+        exists.should.be.true
+        done();
+      })
+    })
+
     it('should download files completely', function(done){
       exec('bin/component install timoxley/font-awesome@3.2.1', function(err, stdout){
         if (err) return done(err);
