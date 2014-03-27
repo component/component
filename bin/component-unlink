@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var program = require('commander')
+  , component = require('..')
+  , fs = require('fs')
+  , exists = fs.existsSync
+  , utils = component.utils
+  , log = utils.log
+  , path = require('path')
+  , resolve = path.resolve
+
+// options
+
+program
+  .usage('<linked_component>');
+
+// examples
+
+program.on('--help', function(){
+  console.log('  Examples:');
+  console.log();
+  console.log('    # unlink a single linked component');
+  console.log('    $ component unlink repo-tip');
+  console.log();
+  console.log('    # unlink multiple linked components');
+  console.log('    $ component unlink repo-tip dev-debug');
+  console.log();
+});
+
+// parse argv
+
+program.parse(process.argv);
+
+// links
+var args = program.args;
+var comps = './components';
+
+// remove existing linked components
+if (exists(comps)) {
+  // if no args try unlink all linked components
+  if(args.length == 0) {
+      args = fs.readdirSync(comps);
+  }
+  args.forEach(function (arg) {
+    var target = path.join(comps, arg);
+    if (!exists(target)) {
+      log('not found', target + ' does not exist.'); 
+      return;
+    }
+    try {
+      fs.unlinkSync(target);
+      log('unlink', target);
+    }
+    catch(e) { log('skipping', target + ' (not a symlink).'); }
+  });
+}

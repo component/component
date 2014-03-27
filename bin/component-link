@@ -1,0 +1,318 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var program = require('commander')
+  , component = require('..')
+  , utils = component.utils
+  , log = utils.log
+  , error = utils.error
+  , url = require('url')
+  , fs = require('fs')
+  , exists = fs.existsSync
+  , stats = fs.statSync
+  , utils = component.utils
+  , path = require('path')
+  , resolve = path.resolve
+  , rimraf = require('rimraf')
+  ;
+
+// options
+
+program
+  .usage('[options] <target_directory>')
+  .option('-s, --skip', 'skip if the component is already installed')
+  .option('-n, --no-deps', 'don\'t resolve dependents for this component')
+  .option('-w, --wildcard', 'symlink components using target directory wildcards')
+  .option('-t, --targets [file]', 'file with a list of targets to symlink (default: \'.symlinks\')')
+  ;
+
+// examples
+
+program.on('--help', function(){
+  console.log('  Examples:');
+  console.log();
+  console.log('    # symlink a single component');
+  console.log('    $ component link ../repo/tip');
+  console.log();
+  console.log('    # symlink multiple components');
+  console.log('    $ component link ../repo/tip ../component/popover');
+  console.log();
+  console.log('    # symlink component only if it doesn\'t exist.');
+  console.log('    $ component link -s ../component/popover');
+  console.log();
+  console.log('    # symlink component without installing dependents');
+  console.log('    $ component link -n ../component/popover');
+  console.log();
+  console.log('    # symlink components using directory wildcard expansion');
+  console.log('    $ component link -w ../repos/* ../dev-repo/com*');
+  console.log();
+  console.log('    # symlink components specified in a targets file');
+  console.log('    $ component link -t mytargets.txt');
+  console.log();
+  console.log('    # or assume the default targets file name of \'.symlinks\'');
+  console.log('    $ component link -t');
+  console.log();
+});
+
+// parse argv
+
+program.parse(process.argv);
+
+// locals
+
+var links = [];
+var comps = './components';
+var args = program.args;
+var skipifexists = program.skip;
+var deps = program.deps;
+var wildcard = program.wildcard;
+var targets = program.targets;
+
+if(targets === true)
+  targets = '.symlinks';
+
+if (args.length == 0 && !targets) program.help();
+
+// repopulate args from targets if it exists
+if(targets) {
+  if(targets !== '.symlinks' && exists(targets) && stats(targets).isDirectory()) {
+    log('warn', 'assuming -t \'.symlinks\' since \'' + targets + '\' is a directory.');
+    args.push(targets);
+    targets = '.symlinks';
+  }
+  if(!exists(targets)) {
+    log('ignoring', '-t was specified but targets file \'' + targets + '\' was not found.');
+  } else {
+    var targets = fs.readFileSync(targets).toString().match(/[\S]+/gm);
+    args = args.concat(targets);
+  }
+}
+
+// repopulate args for --wildcard option
+
+if(wildcard) {
+  var dirs = [];
+  args.forEach(function(arg) {
+    var dir, regexp;
+    // possible wildcard
+    if(!exists(arg)) {
+      dir = path.dirname(arg);
+      if(!exists(dir)) utils.fatal('Path \'' + arg + '\' does not exist.');
+      // escape common regex characters & create regexp filter
+      regexp = path.basename(arg).replace(/(\^|\$|\(|\)|\<|\>|\[|\]|\{|\}|\.|\+|\?)/g, '\\$1');
+      regexp = '^' + regexp.replace(/\*/g, '.*') + '$'; 
+    } else {
+      dir = arg;
+    }
+
+    // if not a wildcard assume component folder    if(!regexp) {      if(dirs.indexOf(dir) < 0)        dirs.push(dir);    } else {      // ls + filter      fs.readdirSync(dir).forEach(function(file) {        if(file.match(new RegExp(regexp))) {          var target = path.join(dir, file);          if(stats(target).isDirectory() && dirs.indexOf(target) < 0)            dirs.push(target);        }      });    }  });
+  args = dirs;
+}
+
+// build link info
+
+args.forEach(function(arg) {
+  var target = arg;
+  if (!exists(target)) utils.fatal('Target path \'' + target + '\' does not exist.');
+  
+  // load targets component.json
+  var conf = loadConfig(target);
+  if(conf) {
+    conf = ensureConf(conf, target);
+    // link
+    var link = {
+      target: target,
+      link: path.join(comps, repoDir(conf.repo)), 
+      conf: conf
+    }
+    // add to list
+    links.push(link);
+  } else {
+    log('ignoring', 'Target path \'' + target + '\' missing \'component.json\', not a component.');
+  }
+});
+
+// ensure ./components exists
+
+if(!exists(comps)) {
+    fs.mkdirSync(comps);
+}
+
+// symlink each target
+
+links.forEach(function (link) {
+  if (exists(link.link)) {
+    if (!skipifexists) {
+      // rm -rf on existing link dir
+      rimraf(link.link, function (err) {
+        if (err) utils.fatal('Unable to replace link path \'' + link.link + '\'.');
+        log('unlink', link.link);
+        createSymlink(link);
+      });
+    } else {
+      log('skipping', link.link + ' (already exists).')
+      if (deps) {
+        installDependencies(link.conf);
+      }
+    }
+  } else {
+      createSymlink(link);
+  }
+});
+
+// actually create the symlink and install dependencies
+
+function createSymlink(link) {
+  // note: sadly symlink appears to work differently on windows / linux, hence the fixup
+  var linkTarget = ((process.platform !== "win32") ? path.join('../', link.target) : link.target);
+  fs.symlink(linkTarget, link.link, 'junction', function (err) {
+    if (err) utils.fatal(err);
+    log('linked', link.link + ' -> ' + linkTarget);
+    if (deps) {
+      installDependencies(link.conf);
+    }
+  });
+}
+
+// install dependencies given a component.json
+
+function installDependencies(conf) {
+  var deps = conf.dependencies;
+  // install each dependent
+  Object.keys(deps).forEach(function (dep) {
+    var version = deps[dep];
+    version = (version == '*') ? 'master' : version;
+    if (!exists(path.join(comps, repoDir(dep)))) {
+      install(conf, dep, version);
+    }
+  });
+}
+
+// helpers
+
+// convert repo to component directory name
+function repoDir(repo) {
+  return repo.replace('/', '-');
+}
+
+// load component.json from
+function loadConfig(from) {
+  var confPath = resolve(path.join(from, 'component.json'));
+  if (exists(confPath)) {
+    return require(confPath);
+  } 
+  // not found
+  return null;
+}
+
+// ensure/default remotes, dependencies, etc
+function ensureConf(conf, target) {
+  conf = conf || {};
+  conf.remotes = conf.remotes || [];
+  conf.remotes.push('https://raw.github.com');
+  conf.dependencies = conf.dependencies || [];
+  // if no repo use repo name otherwise use target folder name (note: the "spec" says repo is mandatory but it appears it is not enforced)
+  conf.repo = conf.repo || conf.name || target.split(/[\/|\\]/).slice(-1)[0];
+  return conf;
+}
+
+// TODO: reporter is a copy paste from component-install... 
+// @TJ you may want to refactor here...
+
+// reporter
+
+function report(pkg, options) {
+  options = options || {};
+  if (pkg.inFlight) return;
+  log('install', pkg.name + '@' + pkg.version);
+
+  pkg.on('error', function(err){
+    if (err.fatal) {
+      error(err.message);
+      process.exit(1);
+    }
+
+    utils.warn('warning', err.message);
+  });
+
+  if (program.verbose) {
+    pkg.on('dep', function(dep){
+      log('dep', dep.name + '@' + dep.version);
+      report(dep, options);
+    });
+
+    pkg.on('exists', function(dep){
+      log('exists', dep.name + '@' + dep.version);
+    });
+
+    pkg.on('file', function(file){
+      log('fetch', pkg.name + ':' + file);
+    });
+  }
+
+  pkg.on('end', function(){
+    log('complete', pkg.name);
+
+    // save to ./component.json
+
+//    if (!local) {
+//      var key = program.dev ? 'development' : 'dependencies';
+//
+//      conf[key] = conf[key] || {};
+//      conf[key][pkg.name] = pkg.version === 'master' ? '*' : pkg.version;
+//
+//      if (exists('component.json')) saveConfig();
+//    }
+  });
+}
+
+// padding
+
+process.on('exit', function(){
+  console.log();
+});
+
+/**
+ * Install package `name` at the given, 'conf'ig and `version`
+ * from all specified remotes.
+ *
+ * @param {Object} conf
+ * @param {String} name
+ * @param {String} version
+ * @api private
+ */
+function install(conf, name, version) {
+  touch(program.out);
+
+  // kick off installation
+  var pkg = component.install(name, version, {
+    dest: program.out,
+    force: program.force,
+    dev: program.dev,
+    remotes: conf.remotes,
+    concurrency: 10
+  });
+
+  report(pkg);
+
+  // TODO: add callback
+  pkg.install();
+}
+
+/**
+ * Touch `path` when present.
+ *
+ * @param {String} path
+ * @api private
+ */
+
+function touch(path) {
+  try {
+    fs.utimesSync(path, new Date, new Date);
+  } catch (err) {
+    // ignore
+  }
+}

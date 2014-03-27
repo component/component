@@ -34,6 +34,8 @@ program.on('--help', function(){
   console.log('    wiki                    open the components list wiki page');
   console.log('    build                   build the component');
   console.log('    ls                      list installed components');
+  console.log('    link <target-dir>       symlink local component(s) to current component');
+  console.log('    unlink [<comp-dir>]     remove symlinked component(s)');
   console.log();
   process.exit();
 });
