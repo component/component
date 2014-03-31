@@ -1,0 +1,5 @@
+{
+  "name": "qux",
+  "scripts": ["index.js"],
+  "styles": ["style.css"]
+}
