@@ -26,7 +26,8 @@ program
   .option('-u, --use <name>', 'use the given build plugin(s)')
   .option('-R, --no-require', 'exclude require from build')
   .option('-v, --verbose', 'verbose output')
-  .option('-m, --mode <js|css>', 'build only js or css')
+  .option('--js', 'build only javascript')
+  .option('--css', 'build only css')
 
 
 // examples
@@ -51,15 +52,6 @@ program.on('--help', function(){
 // parse argv
 
 program.parse(process.argv);
-
-// check mode option
-
-if (program.mode) {
-  if (program.mode !== 'css' && program.mode !== 'js') {
-    console.log('invalid mode: '+ program.mode);
-    process.exit(1);
-  }
-}
 
 // component.json required
 
@@ -133,7 +125,7 @@ builder.build(function(err, obj){
         'if (typeof exports == "object") {',
         '  module.exports = require("' + conf.name + '");',
         '} else if (typeof define == "function" && define.amd) {',
-        '  define(function(){ return require("' + conf.name + '"); });',
+        '  define([], function(){ return require("' + conf.name + '"); });',
         '} else {',
         '  this["' + name + '"] = require("' + conf.name + '");',
         '}'
@@ -145,23 +137,23 @@ builder.build(function(err, obj){
   }
 
   // css
-  if (css && (!program.mode || program.mode == 'css')) {
+  if (css && (!program.js)) {
     fs.writeFile(cssPath, css);
   }
 
   // js
-  if (js && (!program.mode || program.mode === 'js')) {
+  if (js && (!program.css)) {
     fs.writeFile(jsPath, js);
   }
 
   if (!program.verbose) return;
   var duration = new Date - start;
   
-  if (js && (!program.mode || program.mode === 'js')) {
+  if (js && (!program.css)) {
     log('write', jsPath);
     log('js', (js.length / 1024 | 0) + 'kb');
   }
-  if (css && (!program.mode || program.mode == 'css')) {
+  if (css && (!program.js)) {
     log('write', cssPath);
     log('css', (css.length / 1024 | 0) + 'kb');
   }

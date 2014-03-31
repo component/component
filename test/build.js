@@ -39,7 +39,7 @@ describe('component build', function(){
   })
 
   it('should build only css', function(done){
-    exec('cd test/fixtures/path && ' + bin + '-build -v -m css', function(err, stdout){
+    exec('cd test/fixtures/path && ' + bin + '-build -v --css', function(err, stdout){
       if (err) return done(err);
       stdout.should.not.include('build/build.js');
       stdout.should.include('duration');
@@ -54,7 +54,7 @@ describe('component build', function(){
   })
 
   it('should build only js', function(done){
-    exec('cd test/fixtures/path && ' + bin + '-build -v -m js', function(err, stdout){
+    exec('cd test/fixtures/path && ' + bin + '-build -v --js', function(err, stdout){
       if (err) return done(err);
       stdout.should.include('build/build.js');
       stdout.should.include('duration');
