@@ -26,6 +26,9 @@ program
   .option('-u, --use <name>', 'use the given build plugin(s)')
   .option('-R, --no-require', 'exclude require from build')
   .option('-v, --verbose', 'verbose output')
+  .option('--js', 'build only javascript')
+  .option('--css', 'build only css')
+
 
 // examples
 
@@ -134,17 +137,26 @@ builder.build(function(err, obj){
   }
 
   // css
-  if (css) fs.writeFile(cssPath, css);
+  if (css && (!program.js)) {
+    fs.writeFile(cssPath, css);
+  }
 
   // js
-  if (js) fs.writeFile(jsPath, js);
+  if (js && (!program.css)) {
+    fs.writeFile(jsPath, js);
+  }
 
   if (!program.verbose) return;
   var duration = new Date - start;
-  log('write', jsPath);
-  log('write', cssPath);
-  if (js) log('js', (js.length / 1024 | 0) + 'kb');
-  if (css) log('css', (css.length / 1024 | 0) + 'kb');
+  
+  if (js && (!program.css)) {
+    log('write', jsPath);
+    log('js', (js.length / 1024 | 0) + 'kb');
+  }
+  if (css && (!program.js)) {
+    log('write', cssPath);
+    log('css', (css.length / 1024 | 0) + 'kb');
+  }
   log('duration', duration + 'ms');
   console.log();
 });
