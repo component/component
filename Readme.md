@@ -10,13 +10,21 @@
 
   With node binary on OSX:
 
+     32 bits :
+
      $ (cd /usr/local && \
-        curl -L# http://nodejs.org/dist/v0.8.15/node-v0.8.15-darwin-x86.tar.gz \
+        curl -L# http://nodejs.org/dist/v0.10.26/node-v0.10.26-darwin-x86.tar.gz \
         | tar -zx --strip 1) \
        && npm install -g component \
        && printf "installed component(1) %s\n" $(component --version)
 
-  NOTE: tested with node 0.8.x
+     64 bits :
+     
+     $ (cd /usr/local && \
+        curl -L# http://nodejs.org/dist/v0.10.26/node-v0.10.26-darwin-x64.tar.gz \
+        | tar -zx --strip 1) \
+       && npm install -g component \
+       && printf "installed component(1) %s\n" $(component --version)  
 
 ## Features
 
