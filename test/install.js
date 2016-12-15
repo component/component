@@ -23,7 +23,13 @@ describe('component install', function(){
       development: {
         "component/assert": "0.3.0"
       }
-    }), done);
+    }),
+    // writeFile options
+    {
+      flags: 'w',
+      mode: '0777'
+    }, 
+    done);
   })
 
   describe('[name]', function(){
